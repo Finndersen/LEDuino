@@ -65,15 +65,22 @@ class BasePattern	{
 	public:
 		// Constructor
 		BasePattern(	
+			unsigned int axis_len,
 			byte frame_delay,							// Delay between pattern frames (in ms)
 			byte duration=DEFAULT_PATTERN_DURATION		// Duration of pattern (in s)
-			): frame_delay(frame_delay), duration(duration) {
+			): axis_len(axis_len), frame_delay(frame_delay), duration(duration) {
 		} 
 		unsigned long current_time;					// Current time in ms relative to pattern start time (refreshed each loop())
+		unsigned int axis_len;
 		byte frame_delay;							// Delay between pattern frames (in ms)
 		const byte duration;						// Duration of pattern in seconds
 		// Perform pattern intialisation
-		virtual void init();
+		virtual void init() {		
+			DPRINTLN("Initialising pattern");
+
+			start_time = millis();
+			current_time = 0;
+		}
 		
 		// Called each time frame_delay expires
 		// Takes byte value representing sound level from microphone to enable music-responsive patterns
@@ -81,10 +88,10 @@ class BasePattern	{
 			current_time = millis()-start_time;
 			frameAction(sound_level);		
 		}
-		// Get value for LED at position 'i'. By default reads value from pattern_state, can override for custom behaviour
-		virtual CRGB get_led_value(unsigned int i);
+		// Get value for LED at position 'i'. 
+		virtual CRGB get_led_value(unsigned int i) {}
 		// Get axis_len attribute
-		virtual unsigned int get_axis_len();
+		//virtual unsigned int get_axis_len();
 		
 	private:
 		// Method called after every frame_delay. Contains main logic for pattern, generally populates contents of pattern_state array but can update state of pattern in other ways
@@ -95,37 +102,31 @@ class BasePattern	{
 		unsigned long start_time;					// Absolute time pattern was initialised (in ms)
 };
 
-// Base class for pattern with a specific axis length. Override frameAction() to implement pattern logic
+// Base class for pattern which uses an array of length t_axis_len to store state 
 template<unsigned int t_axis_len> 
-class Pattern : public BasePattern	{
+class StatePattern : public BasePattern	{
 	public:
 		// Constructor
-		Pattern(	
+		StatePattern(	
 			byte frame_delay,							// Delay between pattern frames (in ms)
 			byte duration=DEFAULT_PATTERN_DURATION		// Duration of pattern (in s)
-			): BasePattern(frame_delay, duration) {
+			): BasePattern(t_axis_len, frame_delay, duration) {
 		}
 		CRGB pattern_state[t_axis_len];					// Contains LED values for pattern
-		static const unsigned int axis_len = t_axis_len;	// Length of pattern axis (number of LEDS)
 		
-		// Perform pattern intialisation
-		virtual void init() {		
-			DPRINTLN("Initialising pattern");
+		virtual void init()	{
+			BasePattern::init();
 			// Reset pattern state array to black
-			for (byte i=0; i<t_axis_len; i++) {
+			for (byte i=0; i<axis_len; i++) {
 				pattern_state[i] = CRGB::Black;
-			}
-			start_time = millis();
-			current_time = 0;
+			}	
 		}
 		
-		virtual CRGB get_led_value(unsigned int i) {		
+		virtual CRGB get_led_value(unsigned int i) {
+			//Read value from pattern_state
 			return pattern_state[i];
 		}
 
-		virtual unsigned int get_axis_len() {
-			return t_axis_len;
-		}
 };
 
 // Class to define mapping of a pattern to set of axes
@@ -182,7 +183,7 @@ class LEDController {
 				DPRINTLN("New Frame");
 				current_pattern->pattern->newFrame(sound_level);
 				// Get pattern LED values and apply to axes
-				unsigned int axis_len = current_pattern->pattern->get_axis_len();
+				unsigned int axis_len = current_pattern->pattern->axis_len;
 				for (unsigned int i=0; i<axis_len; i++) {
 					led_val = current_pattern->pattern->get_led_value(i);
 					// Apply value to axis in normal direction
