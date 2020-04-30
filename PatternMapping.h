@@ -12,11 +12,11 @@ class BasePatternMapping {
 		// Constructor
 		//BasePatternMapping() {}
 		// Proxy methods which route to associated pattern method
-		virtual void init();
-		virtual bool expired();
-		virtual bool frameReady();
+		virtual void init()=0;
+		virtual bool expired()=0;
+		virtual bool frameReady()=0;
 		// Excute new frame of pattern and map results to LED array
-		virtual void newFrame(CRGB* leds, byte sound_level);	
+		virtual void newFrame(CRGB* leds, byte sound_level)=0;	
 		
 };
 
@@ -26,42 +26,41 @@ class LinearPatternMapping: public BasePatternMapping {
 	public:
 		// Constructor
 		LinearPatternMapping(
-			LinearPattern* pattern,   	// Pointer to LinearPattern object
+			LinearPattern& pattern,   	// Pointer to LinearPattern object
 			LEDAxis* led_axes,			// Pointer to Array of LEDAxis to map pattern to
 			byte num_axes				// Number of axes (length of led_axes)
 		): pattern(pattern), led_axes(led_axes), num_axes(num_axes)	{}
 		
 		// Proxy methods which route to associated pattern method
-		void init()	{
-			return pattern->init();
+		void init()	override {
+			pattern.init();
 		}
-		bool expired()	{
-			return pattern->expired();
+		bool expired() override	{
+			return pattern.expired();
 		}
-		bool frameReady() {
-			return pattern->frameReady();
+		bool frameReady() override {
+			return pattern.frameReady();
 		}
 		
 		// Excute new frame of pattern and map results to LED array
-		void newFrame(CRGB* leds, byte sound_level)	{
-			CRGB led_val;
-			pattern->newFrame(sound_level);
+		void newFrame(CRGB* leds, byte sound_level)	override {
+			pattern.newFrame(sound_level);
 			// Get pattern LED values and apply to axes
-			unsigned int axis_len = pattern->axis_len;
-			for (unsigned int axis_pos=0; axis_pos<axis_len; axis_pos++) {
+			//unsigned int axis_len = pattern.axis_len;
+			for (unsigned int axis_pos=0; axis_pos<pattern.axis_len; axis_pos++) {
 				// Get LED value for axis position
-				led_val = pattern->get_led_value(axis_pos);
+				CRGB led_val = pattern.get_led_value(axis_pos);
 				// Get corresponding LED strip position for each axis and apply value
 				for (byte axis_id=0; axis_id<num_axes; axis_id++) {
-					LEDAxis* axis = &led_axes[axis_id];
-					leds[axis->get_led_id(axis_pos)] = led_val;
+					LEDAxis& axis = led_axes[axis_id];
+					leds[axis.get_led_id(axis_pos)] = led_val;
 				}
 
 			}
 		}
 
 	private:
-		LinearPattern* pattern;
+		LinearPattern& pattern;
 		LEDAxis* led_axes;
 		byte num_axes;
 
@@ -73,28 +72,42 @@ class SpatialPatternMapping: public BasePatternMapping {
 	public:
 		// Constructor
 		SpatialPatternMapping(
-			SpatialPattern* pattern,   	// Pointer to LinearPattern object
+			SpatialPattern& pattern,   	// Pointer to LinearPattern object
 			SpatialAxis* spatial_axes,	// Pointer to Array of SpatialAxis to map pattern to
 			byte num_axes				// Number of axes (length of led_axes)
 		): BasePatternMapping(), pattern(pattern), spatial_axes(spatial_axes), num_axes(num_axes) 	{}
 		
 		// Proxy methods which route to associated pattern method
-		void init()	{
-			return pattern->init();
+		void init()	override {
+			pattern.init();
 		}
-		bool expired()	{
-			return pattern->expired();
+		bool expired() override	{
+			return pattern.expired();
 		}
-		bool frameReady() {
-			return pattern->frameReady();
+		bool frameReady() override {
+			return pattern.frameReady();
 		}
 		
 		// Excute new frame of pattern and map results to LED array
-		void newFrame(CRGB* leds, byte sound_level)	{
-			
+		void newFrame(CRGB* leds, byte sound_level)	override {
+			pattern.newFrame(sound_level);
+			// Loop through every LED (axis and axis position combination), determine spatial position and get value
+			for (byte axis_id=0; axis_id<num_axes; axis_id++) {
+				SpatialAxis& axis = spatial_axes[axis_id];
+				// Loop through all positions on axis
+				for (unsigned int axis_pos=0; axis_pos<axis.axis_len; axis_pos++) {
+					// Get position from axis
+					Point pos = axis.get_spatial_position(axis_pos);
+					// Get LED ID from axis
+					unsigned int led_id = axis.get_led_id(axis_pos);
+					// Get value from pattern
+					leds[led_id] = pattern.get_led_value(pos);
+				}
+				
+			}
 		}
 	private:
-		SpatialPattern* pattern;
+		SpatialPattern& pattern;
 		SpatialAxis* spatial_axes;
 		byte num_axes;
 };

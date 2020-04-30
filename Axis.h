@@ -39,18 +39,18 @@ class LEDAxis {
 		// Negation operator overloading to get reverse version of axis
 		// New axis will cover the same set of LEDs, will have shifted start_offset and be in reverse direction
 		LEDAxis operator-()	{
-			int new_start_offset;
+			int reverse_start_offset;
 			if (reverse)	{
-				new_start_offset = start_offset - axis_len;
+				reverse_start_offset = start_offset - axis_len;
 				// Handle wrap-around below 0
-				if (new_start_offset < 0)	{
-					new_start_offset = axis_len + new_start_offset;
+				if (reverse_start_offset < 0)	{
+					reverse_start_offset = axis_len + reverse_start_offset;
 				}
-				return LEDAxis(new_start_offset, axis_len, strip_len, false);
+				return LEDAxis(reverse_start_offset, axis_len, strip_len, false);
 				
 			} else {
-				new_start_offset = (start_offset + axis_len)%strip_len;
-				return LEDAxis(new_start_offset, axis_len, strip_len, true);
+				reverse_start_offset = (start_offset + axis_len)%strip_len;
+				return LEDAxis(reverse_start_offset, axis_len, strip_len, true);
 			}
 		}
 		
@@ -68,8 +68,8 @@ class SpatialAxis : public LEDAxis {
 			unsigned int start_offset,  // Start offset of axis (relative to start of LED strip)
 			unsigned int axis_len,      // Length of LED axis
 			unsigned int strip_len,     // Full length of LED strip (to enable wrap-over)			
-			Point start_pos, 	// Start position of axis in 3D space
-			Point direction,		// Vector representing direction of axis in 3D space
+			Point start_pos, 			// Start position of axis in 3D space
+			Point direction,			// Vector representing direction of axis in 3D space
 			bool reverse=false          // Whether axis is reversed (LED strip ID decreases with increasing axis value)
 		): LEDAxis(start_offset, axis_len, strip_len, reverse), start_pos(start_pos), direction(direction/direction.norm())   {}
 		
@@ -83,6 +83,17 @@ class SpatialAxis : public LEDAxis {
 		// Get spatial position of an LED on the axis 
 		Point get_spatial_position(unsigned int axis_pos)	{
 			return start_pos + direction*axis_pos;
+		}
+		
+		// Negation operator overloading to get reverse version of axis
+		// New axis will cover the same set of LEDs, new start_pos will be old end_pos, and direction reversed
+		SpatialAxis operator-()	{
+			// Get representation of current underlying LEDAxis config
+			LEDAxis current_axis(start_offset, axis_len, strip_len, reverse);
+			// Get spatial end position of current axis (new start position of reverse axis)
+			Point end_pos = start_pos + direction*axis_len;
+			return SpatialAxis(-current_axis, end_pos, -direction);
+			
 		}
 		
 	protected:

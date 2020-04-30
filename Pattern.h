@@ -12,39 +12,41 @@ class BasePattern	{
 		BasePattern(	
 			unsigned int frame_delay,					// Delay between pattern frames (in ms)
 			byte duration=DEFAULT_PATTERN_DURATION		// Duration of pattern (in s)
-			): frame_delay(frame_delay), duration(duration) {} 
+			): m_frame_delay(frame_delay), m_duration(duration) {} 
 			
-		unsigned long frame_time;					// Time of current frame in ms relative to pattern start time
-		unsigned int frame_delay;							// Delay between pattern frames (in ms)
-		const byte duration;						// Duration of pattern in seconds
+		unsigned long m_frame_time;					// Time of current frame in ms relative to pattern start time
+		unsigned int m_frame_delay;							// Delay between pattern frames (in ms)
+		const byte m_duration;						// Duration of pattern in seconds
 		// Perform pattern intialisation
 		virtual void init() {		
 			DPRINTLN("Initialising pattern");
 
-			start_time = millis();
-			frame_time = 0;
-		}
+			m_start_time = millis();
+			m_frame_time = 0;
+		};
 		// Determine whether pattern has expired (exceeded duration)	
 		bool expired()	{
-			return frame_time >= (duration*1000);
-		}
+			return m_frame_time >= (m_duration*1000);
+		};
 		// Whether new frame is ready (frame_delay has elapsed)
 		bool frameReady()	{
-			return (millis() - start_time - frame_time) >= frame_delay;
-		}
+			return (millis() - m_start_time - m_frame_time) >= m_frame_delay;
+		};
 		
 		// Called each time frame_delay expires
 		// Takes byte value representing sound level from microphone to enable music-responsive patterns
 		void newFrame(byte sound_level) {
-			frame_time = millis()-start_time;
-			frameAction(sound_level);		
-		}
+			m_frame_time = millis()-m_start_time;
+			m_sound_level = sound_level;
+			frameAction();		
+		};
 		
 	protected:
 		// Method called after every frame_delay. Contains main logic for pattern, generally populates contents of pattern_state array but can update state of pattern in other ways
 		// Takes byte value representing sound level from microphone to enable music-responsive patterns
-		virtual void frameAction(byte sound_level) {}
-		unsigned long start_time;					// Absolute time pattern was initialised (in ms)
+		virtual void frameAction()=0;
+		unsigned long m_start_time;					// Absolute time pattern was initialised (in ms)
+		byte m_sound_level=0;
 		
 };
 
@@ -77,7 +79,7 @@ class LinearStatePattern : public LinearPattern	{
 		}
 		CRGB pattern_state[t_axis_len];					// Contains LED values for pattern
 		
-		virtual void init()	{
+		virtual void init()	override {
 			LinearPattern::init();
 			// Reset pattern state array to black
 			for (byte i=0; i<axis_len; i++) {
@@ -85,7 +87,7 @@ class LinearStatePattern : public LinearPattern	{
 			}	
 		}
 		
-		virtual CRGB get_led_value(unsigned int i) {
+		virtual CRGB get_led_value(unsigned int i) override {
 			//Read value from pattern_state
 			return pattern_state[i];
 		}
@@ -103,7 +105,7 @@ class SpatialPattern : public BasePattern {
 			byte duration=DEFAULT_PATTERN_DURATION	// Duration of pattern (in s)
 			): BasePattern(frame_delay, duration), bounds(bounds) {}
 		
-		Point& bounds;
+		Point bounds;
 		
 		// Get value for LED at point coordinate. Point will be within range (+/-bounds.x, +/-bounds.y, +/-bounds.z)
 		virtual CRGB get_led_value(Point point);

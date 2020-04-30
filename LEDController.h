@@ -1,9 +1,8 @@
 /*
-  Full implementation in header file due to issues with templated classes and linking...
+  Full implementations in header file due to issues with templated classes and linking...
 */
 #ifndef LEDController_h
 #define  LEDController_h
-#include <Arduino.h>
 #include <FastLED.h>
 #include "Axis.h"
 #include "Pattern.h"
@@ -17,7 +16,7 @@ class LEDController {
 		LEDController(
 			CRGB* leds,											// Pointer to Array of CRGB LEDs which is registered with FastLED
 			unsigned int num_leds,								// Number of LEDS (length of leds)
-			BasePatternMapping* pattern_mappings,				// Pointer to Array of pattern to axes mapping configurations to run
+			BasePatternMapping** pattern_mappings,				// Pointer to Array of points to PatternMapping configurations to run
 			byte num_patterns,									// Number of pattern configurations (length of pattern_mappings)
 			bool randomize=true									// Whether to randomize pattern order
 			):  leds(leds), num_leds(num_leds), pattern_mappings(pattern_mappings), num_patterns(num_patterns), randomize(randomize) {
@@ -47,7 +46,7 @@ class LEDController {
 
 		CRGB* leds;	
 		unsigned int num_leds;
-		BasePatternMapping* pattern_mappings;
+		BasePatternMapping** pattern_mappings;
 		byte num_patterns;
 		bool randomize;
 		byte current_mapping_id;
@@ -63,7 +62,7 @@ class LEDController {
 			}
 			DPRINT("Choosing new pattern ID: " );
 			DPRINTLN(current_mapping_id);
-			current_mapping = &pattern_mappings[current_mapping_id];
+			current_mapping = pattern_mappings[current_mapping_id];
 			current_mapping->init();
 		}
 };
