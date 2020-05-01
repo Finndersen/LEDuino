@@ -10,7 +10,7 @@ class LEDAxis {
 		// Constructor
 		LEDAxis(
 			unsigned int start_offset,  // Start offset of axis (relative to start of LED strip)
-			unsigned int axis_len,      // Length of LED axis
+			unsigned int axis_len,      // Length of LED axis (number of LEDS)
 			unsigned int strip_len,     // Full length of LED strip (to enable wrap-over)
 			bool reverse=false          // Whether axis is reversed (LED strip ID decreases with increasing axis value)
 			): start_offset(start_offset), axis_len(axis_len), strip_len(strip_len), reverse(reverse) {
@@ -66,23 +66,26 @@ class SpatialAxis : public LEDAxis {
 		// Constructor for initialising spatialaxis from scratch
 		SpatialAxis(
 			unsigned int start_offset,  // Start offset of axis (relative to start of LED strip)
-			unsigned int axis_len,      // Length of LED axis
+			unsigned int axis_len,      // Length of LED axis (number of LEDS)
 			unsigned int strip_len,     // Full length of LED strip (to enable wrap-over)			
 			Point start_pos, 			// Start position of axis in 3D space
-			Point direction,			// Vector representing direction of axis in 3D space
+			Point end_pos,				// End position of axis in 3D space
 			bool reverse=false          // Whether axis is reversed (LED strip ID decreases with increasing axis value)
-		): LEDAxis(start_offset, axis_len, strip_len, reverse), start_pos(start_pos), direction(direction/direction.norm())   {}
+		): LEDAxis(start_offset, axis_len, strip_len, reverse), start_pos(start_pos), end_pos(end_pos)   {
+			// Calculate direction vector of axis with length equal to distance between LEDs 
+			step = (end_pos-start_pos)/(axis_len-1);
+		}
 		
 		// Constructor for initialising from existing LEDAxis
 		SpatialAxis(
-			const LEDAxis existing_axis, 	// Pre-defined LED Axis object
+			const LEDAxis& existing_axis, 	// Pre-defined LED Axis object
 			Point start_pos, 		// Start position of axis in 3D space
-			Point direction			// Vector representing direction of axis in 3D space
-		): LEDAxis(existing_axis.start_offset, existing_axis.axis_len, existing_axis.strip_len, existing_axis.reverse), start_pos(start_pos), direction(direction/direction.norm())  {}
+			Point end_pos				// End position of axis in 3D space
+		): SpatialAxis(existing_axis.start_offset, existing_axis.axis_len, existing_axis.strip_len, start_pos, end_pos, existing_axis.reverse)  {}
 		
 		// Get spatial position of an LED on the axis 
 		Point get_spatial_position(unsigned int axis_pos)	{
-			return start_pos + direction*axis_pos;
+			return start_pos + step*axis_pos;
 		}
 		
 		// Negation operator overloading to get reverse version of axis
@@ -90,15 +93,15 @@ class SpatialAxis : public LEDAxis {
 		SpatialAxis operator-()	{
 			// Get representation of current underlying LEDAxis config
 			LEDAxis current_axis(start_offset, axis_len, strip_len, reverse);
-			// Get spatial end position of current axis (new start position of reverse axis)
-			Point end_pos = start_pos + direction*axis_len;
-			return SpatialAxis(-current_axis, end_pos, -direction);
+			// Reverse start and end position
+			return SpatialAxis(-current_axis, end_pos, start_pos);
 			
 		}
 		
 	protected:
-		Point start_pos;
-		Point direction;
+		Point start_pos;	// Start position of axis in 3D space
+		Point end_pos;		// End position of axis in 3D space
+		Point step;			// Direction vector of axis with length equal to distance between LEDS on axis
 };
 
 #endif

@@ -31,30 +31,39 @@ struct Point {
 	Point operator-(const Point &RHS) { return Point(*this) -= RHS; };
 	
 	// Scalar addition and subtraction
-	Point& operator+=(const double &RHS) { x += RHS; y += RHS; z += RHS; return *this; };
-	Point& operator-=(const double &RHS) { x -= RHS; y -= RHS; z -= RHS; return *this; };
+	Point& operator+=(const float &RHS) { x += RHS; y += RHS; z += RHS; return *this; };
+	Point& operator-=(const float &RHS) { x -= RHS; y -= RHS; z -= RHS; return *this; };
 
-	Point operator+(const double &RHS) { return Point(*this) += RHS; };
-	Point operator-(const double &RHS) { return Point(*this) -= RHS; };
+	Point operator+(const float &RHS) { return Point(*this) += RHS; };
+	Point operator-(const float &RHS) { return Point(*this) -= RHS; };
 	
 	// Scalar product and division
-	Point& operator*=(const double &RHS) { x *= RHS; y *= RHS; z *= RHS; return *this; };
-	Point& operator/=(const double &RHS) { x /= RHS; y /= RHS; z /= RHS; return *this; };
+	Point& operator*=(const float &RHS) { x *= RHS; y *= RHS; z *= RHS; return *this; };
+	Point& operator/=(const float &RHS) { x /= RHS; y /= RHS; z /= RHS; return *this; };
 
-	Point operator*(const double &RHS) { return Point(*this) *= RHS; };
-	Point operator/(const double &RHS) { return Point(*this) /= RHS; };
+	Point operator*(const float &RHS) { return Point(*this) *= RHS; };
+	Point operator/(const float &RHS) { return Point(*this) /= RHS; };
 	
 	// Negation
 	Point operator-() {return Point(-x, -y, -z); };
 	
 	// Euclidean norm
-	double norm() { 
+	float norm() { 
 		return std::sqrt(std::pow(x, 2) + std::pow(y, 2) + std::pow(z, 2)); 
 	};
 	
+	// Calculate distance of this point from plane defined by a normal vector and point
+	float distance_to_plane(Point& norm_vector, Point& plane_point)	{
+		// Calculate coefficent D of plane equation
+		float D = -(norm_vector.x*plane_point.x + norm_vector.y*plane_point.y + norm_vector.z*plane_point.z);
+		// Get numerator of distance equation
+		float num = abs(norm_vector.x*x + norm_vector.y*y + norm_vector.z*z + D);
+		return num / norm_vector.norm();
+		
+	}
 
 	// Distance to other point
-	double distance(const Point& other)	{
+	float distance(const Point& other)	{
 		return std::sqrt(std::pow(other.x-x, 2) + std::pow(other.y-y, 2) + std::pow(other.z-z, 2)); 
 	};
 };
