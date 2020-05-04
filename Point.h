@@ -2,14 +2,7 @@
 #define  Point_h
 
 #include <cmath>
-
-#ifdef DEBUG    //Macros are usually in all capital letters.
-  #define DPRINT(...)    Serial.print(__VA_ARGS__); Serial.flush(); //DPRINT is a macro, debug print
-  #define DPRINTLN(...)  Serial.println(__VA_ARGS__); Serial.flush();   //DPRINTLN is a macro, debug print with new line
-#else
-  #define DPRINT(...)     //now defines a blank line
-  #define DPRINTLN(...)   //now defines a blank line
-#endif
+#include "utils.h"
 
 
 // Structure to represent a cartesian coordinate or vector 
@@ -67,4 +60,12 @@ struct Point {
 		return std::sqrt(std::pow(other.x-x, 2) + std::pow(other.y-y, 2) + std::pow(other.z-z, 2)); 
 	};
 };
+// Implement binary operators as free (non-member) functions to enable symmetry
+inline bool operator==(const Point& lhs, const Point& rhs){ return lhs.x==rhs.x && lhs.y==rhs.y && lhs.z==rhs.z; }
+inline bool operator!=(const Point& lhs, const Point& rhs){return !operator==(lhs,rhs);}
+//inline bool operator< (const Point& lhs, const Point& rhs){ /* do actual comparison */ }
+//inline bool operator> (const Point& lhs, const Point& rhs){return  operator< (rhs,lhs);}
+//inline bool operator<=(const Point& lhs, const Point& rhs){return !operator> (lhs,rhs);}
+//inline bool operator>=(const Point& lhs, const Point& rhs){return !operator< (lhs,rhs);}
+
 #endif

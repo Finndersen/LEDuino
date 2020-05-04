@@ -27,9 +27,9 @@ class LinearPatternMapping: public BasePatternMapping {
 		// Constructor
 		LinearPatternMapping(
 			LinearPattern& pattern,   	// Pointer to LinearPattern object
-			LEDAxis* led_axes,			// Pointer to Array of LEDAxis to map pattern to
-			byte num_axes				// Number of axes (length of led_axes)
-		): pattern(pattern), led_axes(led_axes), num_axes(num_axes)	{}
+			StripSegment* strip_segments,			// Pointer to Array of StripSegment to map pattern to
+			byte num_axes				// Number of axes (length of strip_segments)
+		): pattern(pattern), strip_segments(strip_segments), num_axes(num_axes)	{}
 		
 		// Proxy methods which route to associated pattern method
 		void init()	override {
@@ -46,24 +46,21 @@ class LinearPatternMapping: public BasePatternMapping {
 		void newFrame(CRGB* leds, byte sound_level)	override {
 			pattern.newFrame(sound_level);
 			// Get pattern LED values and apply to axes
-			//unsigned int axis_len = pattern.axis_len;
 			for (unsigned int axis_pos=0; axis_pos<pattern.axis_len; axis_pos++) {
 				// Get LED value for axis position
 				CRGB led_val = pattern.get_led_value(axis_pos);
 				// Get corresponding LED strip position for each axis and apply value
 				for (byte axis_id=0; axis_id<num_axes; axis_id++) {
-					LEDAxis& axis = led_axes[axis_id];
+					StripSegment& axis = strip_segments[axis_id];
 					leds[axis.get_led_id(axis_pos)] = led_val;
 				}
-
 			}
 		}
 
 	private:
 		LinearPattern& pattern;
-		LEDAxis* led_axes;
+		StripSegment* strip_segments;
 		byte num_axes;
-
 };
 
 
@@ -72,9 +69,9 @@ class SpatialPatternMapping: public BasePatternMapping {
 	public:
 		// Constructor
 		SpatialPatternMapping(
-			SpatialPattern& pattern,   	// Pointer to LinearPattern object
+			SpatialPattern& pattern,   	// Reference to LinearPattern object
 			SpatialAxis* spatial_axes,	// Pointer to Array of SpatialAxis to map pattern to
-			byte num_axes				// Number of axes (length of led_axes)
+			byte num_axes				// Number of axes (length of strip_segments)
 		): BasePatternMapping(), pattern(pattern), spatial_axes(spatial_axes), num_axes(num_axes) 	{}
 		
 		// Proxy methods which route to associated pattern method
@@ -95,15 +92,14 @@ class SpatialPatternMapping: public BasePatternMapping {
 			for (byte axis_id=0; axis_id<num_axes; axis_id++) {
 				SpatialAxis& axis = spatial_axes[axis_id];
 				// Loop through all positions on axis
-				for (unsigned int axis_pos=0; axis_pos<axis.axis_len; axis_pos++) {
-					// Get position from axis
+				for (unsigned int axis_pos=0; axis_pos<axis.strip_segment.segment_len; axis_pos++) {
+					// Get position from spatial axis
 					Point pos = axis.get_spatial_position(axis_pos);
-					// Get LED ID from axis
-					unsigned int led_id = axis.get_led_id(axis_pos);
+					// Get LED ID from strip segment
+					unsigned int led_id = axis.strip_segment.get_led_id(axis_pos);
 					// Get value from pattern
 					leds[led_id] = pattern.get_led_value(pos);
 				}
-				
 			}
 		}
 	private:

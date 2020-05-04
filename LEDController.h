@@ -7,7 +7,7 @@
 #include "Axis.h"
 #include "Pattern.h"
 #include "PatternMapping.h"
-
+#include "utils.h"
 
 // Controller object which applies pattern LED values to appropriate axes
 class LEDController {
@@ -35,10 +35,13 @@ class LEDController {
 			// New pattern frame
 			if (current_mapping->frameReady())	{
 				// Run pattern frame logic
-				DPRINTLN("New Frame");
+				
+				long pre_frame_time = millis();
 				current_mapping->newFrame(leds, sound_level);
 				// Show LEDs
 				FastLED.show();
+				DPRINT("Frame Time: ");
+				DPRINTLN(millis()-pre_frame_time);
 			}
 		}
 
@@ -51,6 +54,7 @@ class LEDController {
 		bool randomize;
 		byte current_mapping_id;
 		BasePatternMapping* current_mapping;		// Pointer to currently selected pattern
+		long last_frame_time;
 		
 		// Set ID of new pattern configuration
 		void setNewPatternMapping() {		
@@ -66,7 +70,5 @@ class LEDController {
 			current_mapping->init();
 		}
 };
-
-
 
 #endif
