@@ -20,16 +20,16 @@ class StripSegment {
 		unsigned int get_led_id(unsigned int axis_value){
 			int led_id;
 			// Limit value to maximum length
-			if (axis_value > segment_len)	{
-				axis_value = segment_len;
+			if (axis_value > this->segment_len)	{
+				axis_value = this->segment_len;
 			}
-			if (reverse)  {
+			if (this->reverse)  {
 				// Detect wrap around from 0 back to end of LED strip
-				led_id = wrap_subtract(start_offset, axis_value, strip_len);
+				led_id = wrap_subtract(this->start_offset, axis_value, this->strip_len);
 
 			} else {
 				// Modulo with strip len to enable wrap-around
-				led_id = (start_offset + axis_value)%strip_len;
+				led_id = (this->start_offset + axis_value)%this->strip_len;
 			}
 			
 			return (unsigned int) led_id; //constrain(led_id, start_offset, start_offset+len)
@@ -38,17 +38,17 @@ class StripSegment {
 		// New segment will cover the same set of LEDs, will have shifted start_offset and be in reverse direction
 		StripSegment operator-()	{
 			int reverse_start_offset;
-			if (reverse)	{
-				reverse_start_offset = start_offset - segment_len;
+			if (this->reverse)	{
+				reverse_start_offset = this->start_offset - this->segment_len;
 				// Handle wrap-around below 0
 				if (reverse_start_offset < 0)	{
-					reverse_start_offset = segment_len + reverse_start_offset;
+					reverse_start_offset = this->segment_len + reverse_start_offset;
 				}
-				return StripSegment(reverse_start_offset, segment_len, strip_len, false);
+				return StripSegment(reverse_start_offset, this->segment_len, this->strip_len, false);
 				
 			} else {
-				reverse_start_offset = (start_offset + segment_len)%strip_len;
-				return StripSegment(reverse_start_offset, segment_len, strip_len, true);
+				reverse_start_offset = (this->start_offset + this->segment_len)%this->strip_len;
+				return StripSegment(reverse_start_offset, this->segment_len, this->strip_len, true);
 			}
 		}
 		
@@ -69,14 +69,14 @@ class SpatialAxis {
 		
 		// Get spatial position of an LED on the axis 
 		Point get_spatial_position(unsigned int axis_pos)	{
-			return start_pos + step*axis_pos;
+			return this->start_pos + this->step*axis_pos;
 		}
 		
 		// Negation operator overloading to get reverse version of axis
 		// New axis will cover the same set of LEDs, new start_pos will be old end_pos, and direction reversed
 		SpatialAxis operator-()	{
 			// Reverse start and end position
-			return SpatialAxis(-strip_segment, end_pos, start_pos);
+			return SpatialAxis(-(this->strip_segment), this->end_pos, this->start_pos);
 		}
 		
 		StripSegment strip_segment;		// LED Strip segment for axis

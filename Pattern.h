@@ -20,29 +20,29 @@ class BasePattern	{
 		// Perform pattern intialisation
 		virtual void init() {		
 			DPRINTLN("Initialising pattern");
-			start_time = millis();
-			frame_time = 0;
+			this->start_time = millis();
+			this->frame_time = 0;
 		};
 		// Determine whether pattern has expired (exceeded duration)	
 		bool expired()	{
-			return frame_time >= (duration*1000);
+			return this->frame_time >= (this->duration*1000);
 		};
 		// Whether new frame is ready (frame_delay has elapsed)
 		bool frameReady()	{
-			return (millis() - start_time - frame_time) >= frame_delay;
+			return (millis() - this->start_time - this->frame_time) >= this->frame_delay;
 		};
 		
 		// Set new pattern palette
 		void set_palette(CRGBPalette16 new_palette)	{
-			colour_palette = new_palette;
+			this->colour_palette = new_palette;
 		}
 		
 		// Called each time frame_delay expires
 		// Takes byte value representing sound level from microphone to enable music-responsive patterns
 		void newFrame(byte snd_lvl) {
-			frame_time = millis()-start_time;
-			sound_level = snd_lvl;
-			frameAction();		
+			this->frame_time = millis()-this->start_time;
+			this->sound_level = snd_lvl;
+			this->frameAction();		
 		};
 		
 	protected:
@@ -93,13 +93,13 @@ class LinearStatePattern : public LinearPattern	{
 			LinearPattern::init();
 			// Reset pattern state array to black
 			for (byte i=0; i<axis_len; i++) {
-				pattern_state[i] = CRGB::Black;
+				this->pattern_state[i] = CRGB::Black;
 			}	
 		}
 		
 		virtual CRGB get_led_value(unsigned int i) override {
 			//Read value from pattern_state
-			return pattern_state[i];
+			return this->pattern_state[i];
 		}
 	protected:
 		CRGB pattern_state[t_axis_len];					// Contains LED values for pattern

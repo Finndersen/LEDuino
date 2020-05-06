@@ -20,15 +20,15 @@ struct Point {
 	Point& operator+=(const Point &RHS) { x += RHS.x; y += RHS.y; z += RHS.z; return *this; };
 	Point& operator-=(const Point &RHS) { x -= RHS.x; y -= RHS.y; z -= RHS.z; return *this; };
 	
-	Point operator+(const Point &RHS) { return Point(*this) += RHS; };
-	Point operator-(const Point &RHS) { return Point(*this) -= RHS; };
+	Point operator+(const Point &RHS) const { return Point(*this) += RHS; };
+	Point operator-(const Point &RHS) const { return Point(*this) -= RHS; };
 	
 	// Scalar addition and subtraction
 	Point& operator+=(const float &RHS) { x += RHS; y += RHS; z += RHS; return *this; };
 	Point& operator-=(const float &RHS) { x -= RHS; y -= RHS; z -= RHS; return *this; };
 
-	Point operator+(const float &RHS) { return Point(*this) += RHS; };
-	Point operator-(const float &RHS) { return Point(*this) -= RHS; };
+	Point operator+(const float &RHS) const { return Point(*this) += RHS; };
+	Point operator-(const float &RHS) const { return Point(*this) -= RHS; };
 	
 	// Scalar product and division
 	Point& operator*=(const float &RHS) { x *= RHS; y *= RHS; z *= RHS; return *this; };
@@ -38,15 +38,15 @@ struct Point {
 	Point operator/(const float &RHS) { return Point(*this) /= RHS; };
 	
 	// Negation
-	Point operator-() {return Point(-x, -y, -z); };
+	Point operator-() const {return Point(-x, -y, -z); };
 	
 	// Euclidean norm
-	float norm() { 
+	float norm() const { 
 		return std::sqrt(std::pow(x, 2) + std::pow(y, 2) + std::pow(z, 2)); 
 	};
 	
 	// Calculate distance of this point from plane defined by a normal vector and point
-	float distance_to_plane(Point& norm_vector, Point& plane_point)	{
+	float distance_to_plane(Point& norm_vector, Point& plane_point)	const {
 		// Calculate coefficent D of plane equation
 		float D = -(norm_vector.x*plane_point.x + norm_vector.y*plane_point.y + norm_vector.z*plane_point.z);
 		// Get numerator of distance equation
@@ -56,7 +56,7 @@ struct Point {
 	}
 
 	// Distance to other point
-	float distance(const Point& other)	{
+	float distance(const Point& other)	const {
 		return std::sqrt(std::pow(other.x-x, 2) + std::pow(other.y-y, 2) + std::pow(other.z-z, 2)); 
 	};
 };

@@ -33,25 +33,25 @@ class LinearPatternMapping: public BasePatternMapping {
 		
 		// Proxy methods which route to associated pattern method
 		void init()	override {
-			pattern.init();
+			this->pattern.init();
 		}
 		bool expired() override	{
-			return pattern.expired();
+			return this->pattern.expired();
 		}
 		bool frameReady() override {
-			return pattern.frameReady();
+			return this->pattern.frameReady();
 		}
 		
 		// Excute new frame of pattern and map results to LED array
 		void newFrame(CRGB* leds, byte sound_level)	override {
-			pattern.newFrame(sound_level);
+			this->pattern.newFrame(sound_level);
 			// Get pattern LED values and apply to axes
-			for (unsigned int axis_pos=0; axis_pos<pattern.axis_len; axis_pos++) {
+			for (unsigned int axis_pos=0; axis_pos<this->pattern.axis_len; axis_pos++) {
 				// Get LED value for axis position
-				CRGB led_val = pattern.get_led_value(axis_pos);
+				CRGB led_val = this->pattern.get_led_value(axis_pos);
 				// Get corresponding LED strip position for each axis and apply value
-				for (byte axis_id=0; axis_id<num_axes; axis_id++) {
-					StripSegment& axis = strip_segments[axis_id];
+				for (byte axis_id=0; axis_id<this->num_axes; axis_id++) {
+					StripSegment& axis = this->strip_segments[axis_id];
 					leds[axis.get_led_id(axis_pos)] = led_val;
 				}
 			}
@@ -76,21 +76,21 @@ class SpatialPatternMapping: public BasePatternMapping {
 		
 		// Proxy methods which route to associated pattern method
 		void init()	override {
-			pattern.init();
+			this->pattern.init();
 		}
 		bool expired() override	{
-			return pattern.expired();
+			return this->pattern.expired();
 		}
 		bool frameReady() override {
-			return pattern.frameReady();
+			return this->pattern.frameReady();
 		}
 		
 		// Excute new frame of pattern and map results to LED array
 		void newFrame(CRGB* leds, byte sound_level)	override {
-			pattern.newFrame(sound_level);
+			this->pattern.newFrame(sound_level);
 			// Loop through every LED (axis and axis position combination), determine spatial position and get value
-			for (byte axis_id=0; axis_id<num_axes; axis_id++) {
-				SpatialAxis& axis = spatial_axes[axis_id];
+			for (byte axis_id=0; axis_id<this->num_axes; axis_id++) {
+				SpatialAxis& axis = this->spatial_axes[axis_id];
 				// Loop through all positions on axis
 				for (unsigned int axis_pos=0; axis_pos<axis.strip_segment.segment_len; axis_pos++) {
 					// Get position from spatial axis
@@ -98,7 +98,7 @@ class SpatialPatternMapping: public BasePatternMapping {
 					// Get LED ID from strip segment
 					unsigned int led_id = axis.strip_segment.get_led_id(axis_pos);
 					// Get value from pattern
-					leds[led_id] = pattern.get_led_value(pos);
+					leds[led_id] = this->pattern.get_led_value(pos);
 				}
 			}
 		}

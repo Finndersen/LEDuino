@@ -21,23 +21,23 @@ class LEDController {
 			bool randomize=true									// Whether to randomize pattern order
 			):  leds(leds), num_leds(num_leds), pattern_mappings(pattern_mappings), num_patterns(num_patterns), randomize(randomize) {
 			// Initialise as max for immediate overflow to 0 at start
-			current_mapping_id = num_patterns;
+			this->current_mapping_id = num_patterns-1;
 			// Set initial pattern
-			setNewPatternMapping();
+			this->setNewPatternMapping();
 		}
 		// Run pattern newFrame() if ready, set new pattern if required
 		void loop(byte sound_level=0) {
 			//unsigned long frame_time = millis();
 			// Check if pattern config needs to be changed
-			if (current_mapping->expired())	{
-				setNewPatternMapping();
+			if (this->current_mapping->expired())	{
+				this->setNewPatternMapping();
 			}
 			// New pattern frame
-			if (current_mapping->frameReady())	{
+			if (this->current_mapping->frameReady())	{
 				// Run pattern frame logic
 				
 				long pre_frame_time = millis();
-				current_mapping->newFrame(leds, sound_level);
+				this->current_mapping->newFrame(leds, sound_level);
 				// Show LEDs
 				FastLED.show();
 				DPRINT("Frame Time: ");
@@ -58,16 +58,17 @@ class LEDController {
 		
 		// Set ID of new pattern configuration
 		void setNewPatternMapping() {		
-			if (randomize)	{
+			if (this->randomize)	{
 				// Choose random pattern
-				current_mapping_id = random(0, num_patterns);
+				this->current_mapping_id = random(0, this->num_patterns);
 			} else {
-				current_mapping_id = (current_mapping_id + 1)%num_patterns;
+				// Choose next pattern
+				this->current_mapping_id = (this->current_mapping_id + 1)%(this->num_patterns);
 			}
 			DPRINT("Choosing new pattern ID: " );
-			DPRINTLN(current_mapping_id);
-			current_mapping = pattern_mappings[current_mapping_id];
-			current_mapping->init();
+			DPRINTLN(this->current_mapping_id);
+			this->current_mapping = this->pattern_mappings[current_mapping_id];
+			this->current_mapping->init();
 		}
 };
 
