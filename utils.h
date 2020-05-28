@@ -28,7 +28,7 @@ unsigned int wrap_subtract(unsigned int value, unsigned int subtract, unsigned i
 	if (subtract <= value) 	{
 		return value - subtract;
 	} else {
-		return max_value - (subtract - value - 1);
+		return max_value - (subtract - value-1);
 	}
 }
 

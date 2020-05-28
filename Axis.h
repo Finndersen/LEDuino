@@ -17,7 +17,7 @@ class StripSegment {
 			): start_offset(start_offset), segment_len(segment_len), strip_len(strip_len), reverse(reverse) {
 		}
 		// Get LED Strip ID from segment value
-		unsigned int get_led_id(unsigned int axis_value){
+		unsigned int getLEDId(unsigned int axis_value){
 			int led_id;
 			// Limit value to maximum length
 			if (axis_value > this->segment_len)	{
@@ -25,8 +25,7 @@ class StripSegment {
 			}
 			if (this->reverse)  {
 				// Detect wrap around from 0 back to end of LED strip
-				led_id = wrap_subtract(this->start_offset, axis_value, this->strip_len);
-
+				led_id = wrap_subtract(this->start_offset, axis_value+1, this->strip_len-1);
 			} else {
 				// Modulo with strip len to enable wrap-around
 				led_id = (this->start_offset + axis_value)%this->strip_len;
@@ -68,7 +67,7 @@ class SpatialAxis {
 			): strip_segment(strip_segment), start_pos(start_pos), end_pos(end_pos), step((end_pos-start_pos)/(strip_segment.segment_len-1))   {}
 		
 		// Get spatial position of an LED on the axis 
-		Point get_spatial_position(unsigned int axis_pos)	{
+		Point getSpatialPosition(unsigned int axis_pos)	{
 			return this->start_pos + this->step*axis_pos;
 		}
 		

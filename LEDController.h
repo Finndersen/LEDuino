@@ -38,10 +38,13 @@ class LEDController {
 				
 				long pre_frame_time = millis();
 				this->current_mapping->newFrame(leds, sound_level);
+				long pre_show_time = millis();
 				// Show LEDs
 				FastLED.show();
-				DPRINT("Frame Time: ");
-				DPRINTLN(millis()-pre_frame_time);
+				//DPRINT("Frame Time: ");
+				//DPRINT(pre_show_time-pre_frame_time);
+				//DPRINT(" Show time: ");
+				//DPRINTLN(millis()-pre_show_time);
 			}
 		}
 
@@ -68,7 +71,7 @@ class LEDController {
 			DPRINT("Choosing new pattern ID: " );
 			DPRINTLN(this->current_mapping_id);
 			this->current_mapping = this->pattern_mappings[current_mapping_id];
-			this->current_mapping->init();
+			this->current_mapping->reset();
 		}
 };
 

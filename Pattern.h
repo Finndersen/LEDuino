@@ -14,28 +14,36 @@ class BasePattern	{
 			unsigned int frame_delay,					// Delay between pattern frames (in ms)
 			CRGBPalette16 colour_palette=White_p,		// Colour palette to use for pattern (default to white)
 			byte duration=DEFAULT_PATTERN_DURATION		// Duration of pattern (in s)
-			): frame_delay(frame_delay), duration(duration), colour_palette(colour_palette) {} 
+			): frame_delay(frame_delay), duration(duration), colour_palette(colour_palette), initial_palette(colour_palette) {} 
 			
 
-		// Perform pattern intialisation
-		virtual void init() {		
+		// Initialise/Reset pattern state
+		virtual void reset() {		
 			DPRINTLN("Initialising pattern");
 			this->start_time = millis();
 			this->frame_time = 0;
 		};
+		
 		// Determine whether pattern has expired (exceeded duration)	
 		bool expired()	{
 			return this->frame_time >= (this->duration*1000);
 		};
+		
 		// Whether new frame is ready (frame_delay has elapsed)
 		bool frameReady()	{
 			return (millis() - this->start_time - this->frame_time) >= this->frame_delay;
 		};
 		
 		// Set new pattern palette
-		void set_palette(CRGBPalette16 new_palette)	{
+		void setPalette(CRGBPalette16 new_palette)	{
 			this->colour_palette = new_palette;
 		}
+		
+		// Reset palette to one pattern was initialised with
+		void resetPalette()	{
+			this->colour_palette = this->initial_palette;
+		}
+		
 		
 		// Called each time frame_delay expires
 		// Takes byte value representing sound level from microphone to enable music-responsive patterns
@@ -49,13 +57,18 @@ class BasePattern	{
 		// Method called after every frame_delay. Contains main logic for pattern, generally populates contents of pattern_state array but can update state of pattern in other ways
 		// Takes byte value representing sound level from microphone to enable music-responsive patterns
 		virtual void frameAction()=0;
+		// Get colour from current palette
+		CRGB colorFromPalette(byte hue, byte brightness=255, TBlendType blendType=LINEARBLEND) {
+			return ColorFromPalette(this->colour_palette, hue, brightness, blendType);
+		}
+		
+		// Get palette colour
 		unsigned long frame_time;					// Time of current frame in ms relative to pattern start time
 		unsigned int frame_delay;					// Delay between pattern frames (in ms)
 		const byte duration;						// Duration of pattern in seconds
 		unsigned long start_time;					// Absolute time pattern was initialised (in ms)
 		byte sound_level=0;
-		CRGBPalette16 colour_palette; 
-		
+		CRGBPalette16 colour_palette, initial_palette; // Current and initial colour palettes
 };
 
 // Base class for patterns defined on a single linear strip segment
@@ -72,7 +85,7 @@ class LinearPattern: public BasePattern	{
 		unsigned int axis_len;
 		
 		// Get value for LED at position 'i' along axis 
-		virtual CRGB get_led_value(unsigned int i);
+		virtual CRGB getLEDValue(unsigned int i);
 };
 
 // Base class for linear pattern which uses an array of length t_axis_len to store state 
@@ -89,15 +102,15 @@ class LinearStatePattern : public LinearPattern	{
 				
 			}
 		
-		virtual void init()	override {
-			LinearPattern::init();
+		virtual void reset()	override {
+			LinearPattern::reset();
 			// Reset pattern state array to black
 			for (byte i=0; i<axis_len; i++) {
 				this->pattern_state[i] = CRGB::Black;
 			}	
 		}
 		
-		virtual CRGB get_led_value(unsigned int i) override {
+		virtual CRGB getLEDValue(unsigned int i) override {
 			//Read value from pattern_state
 			return this->pattern_state[i];
 		}
@@ -119,7 +132,7 @@ class SpatialPattern : public BasePattern {
 			): BasePattern(frame_delay, colour_palette, duration), bounds(bounds) {}
 
 		// Get value for LED at point coordinate. Point will be within range (+/-bounds.x, +/-bounds.y, +/-bounds.z)
-		virtual CRGB get_led_value(Point point);
+		virtual CRGB getLEDValue(Point point);
 		
 	protected:
 		Point bounds;  // Point vector defining maximum magnitude of pattern space in x, y and z directions
