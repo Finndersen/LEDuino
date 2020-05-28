@@ -8,6 +8,7 @@
 #include "Pattern.h"
 #include "PatternMapping.h"
 #include "utils.h"
+#include "pattern_examples.h"
 
 // Controller object which applies pattern LED values to appropriate axes
 class LEDController {
@@ -36,9 +37,9 @@ class LEDController {
 			if (this->current_mapping->frameReady())	{
 				// Run pattern frame logic
 				
-				long pre_frame_time = millis();
+				//long pre_frame_time = millis();
 				this->current_mapping->newFrame(leds, sound_level);
-				long pre_show_time = millis();
+				//long pre_show_time = millis();
 				// Show LEDs
 				FastLED.show();
 				//DPRINT("Frame Time: ");
