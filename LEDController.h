@@ -27,18 +27,23 @@ class LEDController {
 			this->setNewPatternMapping();
 		}
 		// Run pattern newFrame() if ready, set new pattern if required
-		void loop(byte sound_level=0) {
-			//unsigned long frame_time = millis();
+		void loop() {
+			//static unsigned long last_frame_time;
+			//unsigned long current_time;
 			// Check if pattern config needs to be changed
-			if (this->current_mapping->expired())	{
+			if (this->current_mapping->pattern.expired())	{
 				this->setNewPatternMapping();
 			}
 			// New pattern frame
-			if (this->current_mapping->frameReady())	{
+			if (this->current_mapping->pattern.frameReady())	{
+				//current_time = millis();
+				//DPRINT("Frame delay: ");
+				//DPRINTLN(current_time - last_frame_time);
+				//last_frame_time=current_time;
 				// Run pattern frame logic
 				
 				//long pre_frame_time = millis();
-				this->current_mapping->newFrame(leds, sound_level);
+				this->current_mapping->newFrame(this->leds);
 				//long pre_show_time = millis();
 				// Show LEDs
 				FastLED.show();
@@ -48,7 +53,9 @@ class LEDController {
 				//DPRINTLN(millis()-pre_show_time);
 			}
 		}
-
+		
+		BasePatternMapping* current_mapping;		// Pointer to currently selected pattern
+		
 	private:
 
 		CRGB* leds;	
@@ -57,7 +64,6 @@ class LEDController {
 		byte num_patterns;
 		bool randomize;
 		byte current_mapping_id;
-		BasePatternMapping* current_mapping;		// Pointer to currently selected pattern
 		long last_frame_time;
 		
 		// Set ID of new pattern configuration
@@ -72,7 +78,7 @@ class LEDController {
 			DPRINT("Choosing new pattern ID: " );
 			DPRINTLN(this->current_mapping_id);
 			this->current_mapping = this->pattern_mappings[current_mapping_id];
-			this->current_mapping->reset();
+			this->current_mapping->pattern.reset();
 		}
 };
 

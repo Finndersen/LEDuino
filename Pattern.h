@@ -47,19 +47,23 @@ class BasePattern	{
 		
 		// Called each time frame_delay expires
 		// Takes byte value representing sound level from microphone to enable music-responsive patterns
-		void newFrame(byte snd_lvl) {
+		void newFrame() {
 			this->frame_time = millis()-this->start_time;
-			this->sound_level = snd_lvl;
 			this->frameAction();		
 		};
+		
+		// Get value for LED at position 'i' along axis (for LinearPattern). Placeholder virtual method
+		virtual CRGB getLEDValue(unsigned int i) { return CRGB::Black; }
+		// Get value for LED at point coordinate. (For SpatialPattern). Placeholder virtual method
+		virtual CRGB getLEDValue(Point point) { return CRGB::Black; }
 		
 	protected:
 		// Method called after every frame_delay. Contains main logic for pattern, generally populates contents of pattern_state array but can update state of pattern in other ways
 		// Takes byte value representing sound level from microphone to enable music-responsive patterns
 		virtual void frameAction()=0;
 		// Get colour from current palette
-		CRGB colorFromPalette(byte hue, byte brightness=255, TBlendType blendType=LINEARBLEND) {
-			return ColorFromPalette(this->colour_palette, hue, brightness, blendType);
+		CRGB colorFromPalette(byte hue, byte bright=255, TBlendType blendType=LINEARBLEND) {
+			return ColorFromPalette(this->colour_palette, hue, bright, blendType);
 		}
 		
 		// Get palette colour
@@ -67,7 +71,6 @@ class BasePattern	{
 		unsigned int frame_delay;					// Delay between pattern frames (in ms)
 		const byte duration;						// Duration of pattern in seconds
 		unsigned long start_time;					// Absolute time pattern was initialised (in ms)
-		byte sound_level=0;
 		CRGBPalette16 colour_palette, initial_palette; // Current and initial colour palettes
 };
 
@@ -85,7 +88,9 @@ class LinearPattern: public BasePattern	{
 		unsigned int axis_len;
 		
 		// Get value for LED at position 'i' along axis 
-		virtual CRGB getLEDValue(unsigned int i);
+		//virtual CRGB getLEDValue(unsigned int i);
+		
+		//CRGB getLEDValue(Point point) {};
 };
 
 // Base class for linear pattern which uses an array of length t_axis_len to store state 
@@ -132,7 +137,8 @@ class SpatialPattern : public BasePattern {
 			): BasePattern(frame_delay, colour_palette, duration), bounds(bounds) {}
 
 		// Get value for LED at point coordinate. Point will be within range (+/-bounds.x, +/-bounds.y, +/-bounds.z)
-		virtual CRGB getLEDValue(Point point);
+		//virtual CRGB getLEDValue(Point point);
+		//CRGB getLEDValue(unsigned int i) {}
 		
 	protected:
 		Point bounds;  // Point vector defining maximum magnitude of pattern space in x, y and z directions

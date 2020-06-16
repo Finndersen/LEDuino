@@ -10,15 +10,15 @@
 class BasePatternMapping {
 	public:
 		// Constructor
-		//BasePatternMapping() {}
-		// Proxy methods which route to associated pattern method 
-		// (cant implement here because different mapping classes have different pattern types)
-		virtual void reset()=0;
-		virtual bool expired()=0;
-		virtual bool frameReady()=0;
+		BasePatternMapping(BasePattern& pattern, byte num_axes): pattern(pattern), num_axes(num_axes) {}
+
 		// Excute new frame of pattern and map results to LED array
-		virtual void newFrame(CRGB* leds, byte sound_level)=0;	
+		virtual void newFrame(CRGB* leds)=0;
+
+		BasePattern& pattern;
+	protected:
 		
+		byte num_axes;
 };
 
 // Class to define mapping of a pattern to set of axes
@@ -27,27 +27,17 @@ class LinearPatternMapping: public BasePatternMapping {
 	public:
 		// Constructor
 		LinearPatternMapping(
-			LinearPattern& pattern,   	// Pointer to LinearPattern object
-			StripSegment* strip_segments,			// Pointer to Array of StripSegment to map pattern to
-			byte num_axes				// Number of axes (length of strip_segments)
-		): pattern(pattern), strip_segments(strip_segments), num_axes(num_axes)	{}
-		
-		// Proxy methods which route to associated pattern method
-		void reset()	override {
-			this->pattern.reset();
-		}
-		bool expired() override	{
-			return this->pattern.expired();
-		}
-		bool frameReady() override {
-			return this->pattern.frameReady();
-		}
-		
+			BasePattern& pattern,   		// Pointer to LinearPattern object
+			StripSegment* strip_segments,	// Pointer to Array of StripSegment to map pattern to
+			byte num_axes					// Number of axes (length of strip_segments)
+		): BasePatternMapping(pattern, num_axes),  strip_segments(strip_segments)	{}
+
 		// Excute new frame of pattern and map results to LED array
-		void newFrame(CRGB* leds, byte sound_level)	override {
-			this->pattern.newFrame(sound_level);
+		void newFrame(CRGB* leds)	override {
+			this->pattern.newFrame();
 			// Get pattern LED values and apply to axes
-			for (unsigned int axis_pos=0; axis_pos<this->pattern.axis_len; axis_pos++) {
+			unsigned int axis_len = this->strip_segments[0].segment_len;
+			for (unsigned int axis_pos=0; axis_pos < axis_len; axis_pos++) {
 				// Get LED value for axis position
 				CRGB led_val = this->pattern.getLEDValue(axis_pos);
 				// Get corresponding LED strip position for each axis and apply value
@@ -59,9 +49,8 @@ class LinearPatternMapping: public BasePatternMapping {
 		}
 
 	private:
-		LinearPattern& pattern;
+		//LinearPattern& pattern;
 		StripSegment* strip_segments;
-		byte num_axes;
 };
 
 
@@ -70,27 +59,16 @@ class SpatialPatternMapping: public BasePatternMapping {
 	public:
 		// Constructor
 		SpatialPatternMapping(
-			SpatialPattern& pattern,   	// Reference to LinearPattern object
+			BasePattern& pattern,   	// Reference to LinearPattern object
 			SpatialAxis* spatial_axes,	// Pointer to Array of SpatialAxis to map pattern to
-			byte num_axes				// Number of axes (length of strip_segments)
-		): BasePatternMapping(), pattern(pattern), spatial_axes(spatial_axes), num_axes(num_axes) 	{}
-		
-		// Proxy methods which route to associated pattern method
-		void reset()	override {
-			this->pattern.reset();
-		}
-		bool expired() override	{
-			return this->pattern.expired();
-		}
-		bool frameReady() override {
-			return this->pattern.frameReady();
-		}
-		
+			byte num_axes				// Number of axes (length of spatial_axes)
+		): BasePatternMapping(pattern, num_axes), spatial_axes(spatial_axes)	{}
+
 		// Excute new frame of pattern and map results to LED array
-		void newFrame(CRGB* leds, byte sound_level)	override {
-			this->pattern.newFrame(sound_level);
+		void newFrame(CRGB* leds)	override {
+			this->pattern.newFrame();
 			// Loop through every LED (axis and axis position combination), determine spatial position and get value
-			for (byte axis_id=0; axis_id<this->num_axes; axis_id++) {
+			for (byte axis_id=0; axis_id < this->num_axes; axis_id++) {
 				SpatialAxis& axis = this->spatial_axes[axis_id];
 				// Loop through all positions on axis
 				for (unsigned int axis_pos=0; axis_pos<axis.strip_segment.segment_len; axis_pos++) {
@@ -103,10 +81,9 @@ class SpatialPatternMapping: public BasePatternMapping {
 				}
 			}
 		}
-	private:
-		SpatialPattern& pattern;
+	protected:
+		//SpatialPattern& pattern;
 		SpatialAxis* spatial_axes;
-		byte num_axes;
 };
 
 #endif

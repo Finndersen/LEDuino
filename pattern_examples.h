@@ -6,24 +6,24 @@
 // So instead of jumping one pixel at a time, can effectively move a fraction of a pixel with each step
 class MovingPulse: public LinearPattern  {
   public:
-    MovingPulse(unsigned int axis_len, unsigned int frame_delay, byte pulse_len=3, byte smooth_factor=2, CRGBPalette16 colour_palette = White_p):
+    MovingPulse(unsigned int axis_len, unsigned int frame_delay, byte pulse_len=3, byte speed=4, CRGBPalette16 colour_palette = White_p, byte interpolation_factor=8):
       LinearPattern(axis_len, frame_delay, colour_palette), 
-	  head_pos(0), pulse_len(pulse_len), smooth_factor(smooth_factor), tail_interpolator(Interpolator(0, 255, (pulse_len*smooth_factor) + 1, 0))  {}
+	  head_pos(0), pulse_len(pulse_len), speed(speed), interpolation_factor(interpolation_factor), tail_interpolator(Interpolator(0, 255, (pulse_len*interpolation_factor) + 1, 0))  {}
 
     // Update pulse position (on higher-resolution virtual axis)
-	// Bounds are from 0 -> axis_len*smooth_factor
+	// Bounds are from 0 -> axis_len*interpolation_factor
     void frameAction()  override {
-      this->head_pos = (this->head_pos + 1) % (this->axis_len*this->smooth_factor);
+      this->head_pos = (this->head_pos + this->speed) % (this->axis_len*this->interpolation_factor);
     }
 
     // Construct pulse from head position
 	// i is from 0 -> axis_len
-    CRGB getLEDValue(unsigned int i) {
+    CRGB getLEDValue(unsigned int i) override {
 		// Start with black
 		CRGB val = CRGB::Black;
 		// Get average value of all virtual sub-pixels that make up physical pixel
-		for (unsigned int vp=i*this->smooth_factor; vp < (i+1)*this->smooth_factor; vp++)	{
-			val += this->getVirtualLEDValue(vp)/this->smooth_factor;
+		for (unsigned int vp=i*this->interpolation_factor; vp < (i+1)*this->interpolation_factor; vp++)	{
+			val += this->getVirtualLEDValue(vp)/this->interpolation_factor;
 		}
 		return val;
       
@@ -31,29 +31,31 @@ class MovingPulse: public LinearPattern  {
 
   private:
 	// Get value for pixel as position i on virtual high-resolution axis
-	// i is from 0 -> axis_len*smooth_factor
+	// i is from 0 -> axis_len*interpolation_factor
 	CRGB getVirtualLEDValue(unsigned int i)	{
 		// Figure out distance behind pulse head to get brightness
 		int distance_behind_head = this->head_pos - i;
 		// Case of when position is in front of pulse head so distance_behind_head is negative
 		if (distance_behind_head < 0)	{
-			distance_behind_head = (this->axis_len*this->smooth_factor) + distance_behind_head;
+			distance_behind_head = (this->axis_len*this->interpolation_factor) + distance_behind_head;
 		}
 		// If not within pulse width, return black
-		if (distance_behind_head > this->pulse_len*this->smooth_factor)	{
+		if (distance_behind_head > this->pulse_len*this->interpolation_factor)	{
 			return CRGB::Black;
 		}
 		// Use interpolator to get brightness
 		byte lum = tail_interpolator.get_value(distance_behind_head);
-		byte hue = (i*255) / (this->axis_len*this->smooth_factor);
+		byte hue = (i*255) / (this->axis_len*this->interpolation_factor);
 		return this->colorFromPalette(hue, lum);
 	}
 	
 	
     unsigned int head_pos;    			// Position of head of pulse
-    byte pulse_len;        				// Length of pulse (in actual pixels). Virtual pulse width is pulse_len*smooth_factor
-	byte smooth_factor;					// Sub-pixel factor for smoother movement (higher values will require faster LED update for same pulse 'speed')
+    byte pulse_len;        				// Length of pulse (in actual pixels). Virtual pulse width is pulse_len*interpolation_factor
+	byte speed; 						// NUmber of virtual pixels to move each step
+	byte interpolation_factor;					// Sub-pixel factor for smoother movement (higher values will require faster LED update for same pulse 'speed')
     Interpolator tail_interpolator;  	// Interpolator for pulse tail brightness
+	
 };
 
 
@@ -88,7 +90,7 @@ class SweepingPlane : public SpatialPattern  {
     }
 
     // Brightness of point depends on distance to light ball
-    CRGB getLEDValue(Point point) {
+    CRGB getLEDValue(Point point)  override {
       // Get distance from point to plane
       float distance = point.distance_to_plane(direction, pos);
       byte lum = 0;
@@ -142,7 +144,7 @@ class Twinkle : public LinearPattern  {
       clock32 = millis();
     }
 
-    CRGB getLEDValue(unsigned int i) {
+    CRGB getLEDValue(unsigned int i)  override  {
       CRGB pixel;
       PRNG16 = (uint16_t)(PRNG16 * 2053) + 1384; // next 'random' number
       uint16_t myclockoffset16 = PRNG16; // use that number as clock offset
@@ -246,7 +248,7 @@ class GrowThenShrink : public LinearPattern  {
 
 		}
 
-		CRGB getLEDValue(unsigned int i) {
+		CRGB getLEDValue(unsigned int i)  override  {
 			if ((this->tail_pos <= i) && (i <= this->head_pos)) 	{
 				return this->colorFromPalette((i*255)/this->axis_len);
 			} else {
@@ -522,7 +524,7 @@ class SpatialFire : public SpatialPattern	{
 		}
 	}
 	
-	CRGB getLEDValue(Point point)	{
+	CRGB getLEDValue(Point point)  override {
 		// Get heat value by y-coordinate (-bounds.z -> bounds.z to 0 -> buonds.z*2)
 		// Scale the heat value from 0-255 down to 0-240
 		// for best results with color palettes.
@@ -532,8 +534,7 @@ class SpatialFire : public SpatialPattern	{
 		if (heat_index == 0)	{
 			colorindex = constrain(colorindex, 40, 120);
 		}
-		CRGB color = this->colorFromPalette(colorindex);
-		return color;
+		return this->colorFromPalette(colorindex);
 	}
 	
 	protected:
