@@ -45,8 +45,7 @@ class BasePattern	{
 		}
 		
 		
-		// Called each time frame_delay expires
-		// Takes byte value representing sound level from microphone to enable music-responsive patterns
+		// Perform action for new frame
 		void newFrame() {
 			this->frame_time = millis()-this->start_time;
 			this->frameAction();		
@@ -67,7 +66,7 @@ class BasePattern	{
 		}
 		
 		// Get palette colour
-		unsigned long frame_time;					// Time of current frame in ms relative to pattern start time
+		unsigned long frame_time;					// Number of frames since pattern started
 		unsigned int frame_delay;					// Delay between pattern frames (in ms)
 		const byte duration;						// Duration of pattern in seconds
 		unsigned long start_time;					// Absolute time pattern was initialised (in ms)

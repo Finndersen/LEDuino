@@ -58,6 +58,55 @@ class MovingPulse: public LinearPattern  {
 	
 };
 
+//Moing sine wave with randomised speed, duration and colour offset, and changes direction
+class RandomSineWave: public LinearPattern  {
+  public:
+    RandomSineWave(unsigned int axis_len, unsigned int frame_delay, CRGBPalette16 colour_palette = White_p):
+      LinearPattern(axis_len, frame_delay, colour_palette, 40) {}
+	
+	void reset() override{
+		LinearPattern::reset();
+		this->interpolation_factor = 6;
+		this->pos = 0;
+		this->randomize_state();
+		
+	}
+	
+	void randomize_state() {
+		this->speed=random(3,18);
+		this->direction=!this->direction;
+		this->randomize_time = random(10, 200);
+		this->colour_offset = random(0,255);
+	}
+	
+	void frameAction()  override {
+		if (randomize_time) {
+			randomize_time--;
+		} else {
+			this->randomize_state();
+		}
+		if (direction) {
+			this->pos = (this->pos + this->speed) % (this->axis_len*this->interpolation_factor);
+		} else {
+			this->pos = wrap_subtract(this->pos, this->speed, this->axis_len*this->interpolation_factor);
+		}
+	}
+	 
+	CRGB getLEDValue(unsigned int i) override {
+		
+		byte virtual_pos = (255*(i*this->interpolation_factor + this->pos))/(this->interpolation_factor*this->axis_len);
+		byte val = cubicwave8(virtual_pos);
+		return this->colorFromPalette((val+this->colour_offset)%255, val);
+	}
+	  
+	protected:
+		byte speed;
+		bool direction=false;
+		uint8_t pos;    // Position from 0 to interpolation_factor*axis_len
+		byte interpolation_factor = 6;
+		byte colour_offset;
+		unsigned int randomize_time;
+};
 
 // Direction vectors
 Point v_x(1, 0, 0);
@@ -261,9 +310,9 @@ class GrowThenShrink : public LinearPattern  {
 };
 		
 template<unsigned int t_axis_len> 
-class RandomFill : public LinearStatePattern<t_axis_len>  {
+class SparkleFill : public LinearStatePattern<t_axis_len>  {
   public:
-    RandomFill(byte frame_delay, CRGBPalette16 colour_palette=RainbowColors_p, byte duration=DEFAULT_PATTERN_DURATION):
+    SparkleFill(byte frame_delay, CRGBPalette16 colour_palette=RainbowColors_p, byte duration=DEFAULT_PATTERN_DURATION):
       LinearStatePattern<t_axis_len>(frame_delay, colour_palette, duration) {}
 	  
 	void reset() {

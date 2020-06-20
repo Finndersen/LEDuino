@@ -11,7 +11,10 @@ class BasePatternMapping {
 	public:
 		// Constructor
 		BasePatternMapping(BasePattern& pattern, byte num_axes): pattern(pattern), num_axes(num_axes) {}
-
+		// Reset state of PatternMapping underlying pattern(s)
+		//virtual void reset() {
+		//	
+		//}
 		// Excute new frame of pattern and map results to LED array
 		virtual void newFrame(CRGB* leds)=0;
 
