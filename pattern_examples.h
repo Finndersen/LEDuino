@@ -2,7 +2,7 @@
 #include <FastLED.h>
 
 // Simple moving pulse of light along axis
-// Includes sub-pixel interpolation for smoother motion 
+// Includes sub-pixel interpolation for smoother motion (similar to Mark Kriegsman's anti-aliased light bar example at: https://pastebin.com/yAgKs0Ay, but different implementation)
 // So instead of jumping one pixel at a time, can effectively move a fraction of a pixel with each step
 class MovingPulse: public LinearPattern  {
   public:
@@ -58,11 +58,11 @@ class MovingPulse: public LinearPattern  {
 	
 };
 
-//Moing sine wave with randomised speed, duration and colour offset, and changes direction
+//Moing sine wave with randomised speed, duration and rainbow colour offset, and changes direction
 class RandomSineWave: public LinearPattern  {
   public:
-    RandomSineWave(unsigned int axis_len, unsigned int frame_delay, CRGBPalette16 colour_palette = White_p):
-      LinearPattern(axis_len, frame_delay, colour_palette, 40) {}
+    RandomSineWave(unsigned int axis_len, unsigned int frame_delay, unsigned int duration=40):
+      LinearPattern(axis_len, frame_delay, RainbowColors_p, duration) {}
 	
 	void reset() override{
 		LinearPattern::reset();
@@ -74,9 +74,11 @@ class RandomSineWave: public LinearPattern  {
 	
 	void randomize_state() {
 		this->speed=random(3,18);
+		this->scale_factor = random(1,3);
 		this->direction=!this->direction;
 		this->randomize_time = random(10, 200);
 		this->colour_offset = random(0,255);
+		this->dim = random(0, 7) == 6;
 	}
 	
 	void frameAction()  override {
@@ -95,8 +97,8 @@ class RandomSineWave: public LinearPattern  {
 	CRGB getLEDValue(unsigned int i) override {
 		
 		byte virtual_pos = (255*(i*this->interpolation_factor + this->pos))/(this->interpolation_factor*this->axis_len);
-		byte val = cubicwave8(virtual_pos);
-		return this->colorFromPalette((val+this->colour_offset)%255, val);
+		byte val = cubicwave8((virtual_pos*this->scale_factor)%255);
+		return this->colorFromPalette((val+this->colour_offset)%255, this->dim ? val>>2 : val);
 	}
 	  
 	protected:
@@ -106,7 +108,61 @@ class RandomSineWave: public LinearPattern  {
 		byte interpolation_factor = 6;
 		byte colour_offset;
 		unsigned int randomize_time;
+		byte scale_factor;
+		bool dim;  //Whether to make pattern very dim (can look cool)
 };
+
+// Pride2015
+// Animated, ever-changing rainbows.
+// by Mark Kriegsman. https://github.com/FastLED/FastLED/blob/master/examples/Pride2015/Pride2015.ino
+template<unsigned int t_axis_len> 
+class PridePattern: public LinearStatePattern<t_axis_len>	{
+	public:
+		PridePattern(unsigned int frame_delay, uint8_t speed_factor=4, unsigned int duration=10):
+		  LinearStatePattern<t_axis_len>(frame_delay, RainbowColors_p, duration), speed_factor(speed_factor) {}
+		
+		void frameAction()	override {
+			static uint16_t sPseudotime = 0;
+			static uint16_t sLastMillis = 0;
+			static uint16_t sHue16 = 0;
+
+			uint8_t sat8 = beatsin88( 87*this->speed_factor, 220, 250);
+			uint8_t brightdepth = beatsin88( 341*this->speed_factor, 96, 224);
+			uint16_t brightnessthetainc16 = beatsin88( 203*this->speed_factor, (25 * 256), (40 * 256));
+			uint8_t msmultiplier = beatsin88(240*this->speed_factor, 40, 240);
+
+			uint16_t hue16 = sHue16;//gHue * 256;
+			uint16_t hueinc16 = beatsin88(113*this->speed_factor, 1, 3000);
+
+			uint16_t ms = millis();
+			uint16_t deltams = ms - sLastMillis ;
+			sLastMillis  = ms;
+			sPseudotime += deltams * msmultiplier;
+			sHue16 += deltams * beatsin88( 400, 5,9);
+			uint16_t brightnesstheta16 = sPseudotime;
+
+			for( uint16_t i = 0 ; i < this->axis_len; i++) {
+				hue16 += hueinc16;
+				uint8_t hue8 = hue16 / 256;
+
+				brightnesstheta16  += brightnessthetainc16;
+				uint16_t b16 = sin16( brightnesstheta16  ) + 32768;
+
+				uint16_t bri16 = (uint32_t)((uint32_t)b16 * (uint32_t)b16) / 65536;
+				uint8_t bri8 = (uint32_t)(((uint32_t)bri16) * brightdepth) / 65536;
+				bri8 += (255 - brightdepth);
+
+				CRGB newcolor = CHSV( hue8, sat8, bri8);
+
+				uint16_t pixelnumber = (this->axis_len-1) - i;
+
+				nblend( this->pattern_state[pixelnumber], newcolor, 64);
+			}
+		}
+	protected:
+		uint8_t speed_factor;  // Factor to increase rate of change of pattern parameters
+};
+
 
 // Direction vectors
 Point v_x(1, 0, 0);
@@ -170,6 +226,7 @@ void coolLikeIncandescent( CRGB& c, uint8_t phase)
   c.b = qsub8( c.b, cooling * 2);
 }
 
+// Adapted from pattern by Mark Kriegsman
 // https://gist.github.com/kriegsman/756ea6dcae8e30845b5a
 //  The idea behind this (new) implementation is that there's one
 //  basic, repeating pattern that each pixel follows like a waveform:
