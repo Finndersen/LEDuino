@@ -4,35 +4,21 @@
 #include "Point.h"
 #include "utils.h"
 #include "palettes.h"
-#define DEFAULT_PATTERN_DURATION 10
+
 
 // Abstract Base class for patterns. Override frameAction() to implement pattern logic
 class BasePattern	{
 	public:
 		// Constructor
 		BasePattern(	
-			unsigned int frame_delay,					// Delay between pattern frames (in ms)
-			CRGBPalette16 colour_palette=White_p,		// Colour palette to use for pattern (default to white)
-			byte duration=DEFAULT_PATTERN_DURATION		// Duration of pattern (in s)
-			): frame_delay(frame_delay), duration(duration), colour_palette(colour_palette), initial_palette(colour_palette) {} 
+			uint16_t resolution,					
+			CRGBPalette16 colour_palette=White_p		// Colour palette to use for pattern (default to white)
+			): resolution(resolution), colour_palette(colour_palette), initial_palette(colour_palette) {} 
 			
-
+		
+		
 		// Initialise/Reset pattern state
-		virtual void reset() {		
-			DPRINTLN("Initialising pattern");
-			this->start_time = millis();
-			this->frame_time = 0;
-		};
-		
-		// Determine whether pattern has expired (exceeded duration)	
-		bool expired()	{
-			return this->frame_time >= (this->duration*1000);
-		};
-		
-		// Whether new frame is ready (frame_delay has elapsed)
-		bool frameReady()	{
-			return (millis() - this->start_time - this->frame_time) >= this->frame_delay;
-		};
+		virtual void reset() {};
 		
 		// Set new pattern palette
 		void setPalette(CRGBPalette16 new_palette)	{
@@ -45,76 +31,57 @@ class BasePattern	{
 		}
 		
 		
-		// Perform action for new frame
-		void newFrame() {
-			this->frame_time = millis()-this->start_time;
-			this->frameAction();		
-		};
+		// Contains main logic for pattern.
+		// Provides time in ms since pattern started 		
+		virtual void frameAction(unsigned long frame_time)=0;
 		
-		// Get value for LED at position 'i' along axis (for LinearPattern). Placeholder virtual method
-		virtual CRGB getLEDValue(unsigned int i) { return CRGB::Black; }
-		// Get value for LED at point coordinate. (For SpatialPattern). Placeholder virtual method
-		virtual CRGB getLEDValue(Point point) { return CRGB::Black; }
-		
+		uint16_t resolution;
 	protected:
-		// Method called after every frame_delay. Contains main logic for pattern, generally populates contents of pattern_state array but can update state of pattern in other ways
-		// Takes byte value representing sound level from microphone to enable music-responsive patterns
-		virtual void frameAction()=0;
-		// Get colour from current palette
+	
+		// Select colour from current palette
 		CRGB colorFromPalette(byte hue, byte bright=255, TBlendType blendType=LINEARBLEND) {
 			return ColorFromPalette(this->colour_palette, hue, bright, blendType);
 		}
 		
-		// Get palette colour
-		unsigned long frame_time;					// Number of frames since pattern started
-		unsigned int frame_delay;					// Delay between pattern frames (in ms)
-		const byte duration;						// Duration of pattern in seconds
-		unsigned long start_time;					// Absolute time pattern was initialised (in ms)
+		unsigned long frame_time;					// Time in ms since pattern started
 		CRGBPalette16 colour_palette, initial_palette; // Current and initial colour palettes
 };
 
-// Base class for patterns defined on a single linear strip segment
+// Base class for patterns defined on a simple linear axis 
 // Converts an segment position into an LED value
 class LinearPattern: public BasePattern	{
 	public:
 		LinearPattern(	
-			unsigned int axis_len,						// Length of segment to apply axis to
-			unsigned int frame_delay,					// Delay between pattern frames (in ms)
-			CRGBPalette16 colour_palette=White_p,		// Colour palette to use for pattern 
-			byte duration=DEFAULT_PATTERN_DURATION		// Duration of pattern (in s)
-			): BasePattern(frame_delay, colour_palette, duration), axis_len(axis_len)  {}
+			uint16_t resolution,					// Number of virtual pixels along pattern axis		
+			CRGBPalette16 colour_palette=White_p		// Colour palette to use for pattern 
+		): BasePattern(resolution, colour_palette)   {}
 		
-		unsigned int axis_len;
+		// Get value for LED at position 'i' along virtual pattern axis
+		virtual CRGB getLEDValue(uint16_t i) { return CRGB::Black; }
 		
-		// Get value for LED at position 'i' along axis 
-		//virtual CRGB getLEDValue(unsigned int i);
-		
-		//CRGB getLEDValue(Point point) {};
 };
 
 // Base class for linear pattern which uses an array of length t_axis_len to store state 
 // Used for more complex patterns that need to use detailed state from previous frame
-template<unsigned int t_axis_len> 
+template<uint16_t t_axis_len> 
 class LinearStatePattern : public LinearPattern	{
 	public:
 		// Constructor
 		LinearStatePattern(	
-			unsigned int frame_delay,							// Delay between pattern frames (in ms)
-			CRGBPalette16 colour_palette=White_p,		// Colour palette to use for pattern (default to white)
-			byte duration=DEFAULT_PATTERN_DURATION		// Duration of pattern (in s)
-			): LinearPattern(t_axis_len, frame_delay, colour_palette, duration) {
+			CRGBPalette16 colour_palette=White_p		// Colour palette to use for pattern (default to white)
+		): LinearPattern(t_axis_len, colour_palette) {
 				
 			}
 		
 		virtual void reset()	override {
 			LinearPattern::reset();
 			// Reset pattern state array to black
-			for (byte i=0; i<axis_len; i++) {
+			for (byte i=0; i<resolution; i++) {
 				this->pattern_state[i] = CRGB::Black;
 			}	
 		}
 		
-		virtual CRGB getLEDValue(unsigned int i) override {
+		virtual CRGB getLEDValue(uint16_t i) override {
 			//Read value from pattern_state
 			return this->pattern_state[i];
 		}
@@ -123,24 +90,18 @@ class LinearStatePattern : public LinearPattern	{
 };
 
 
-// Pattern defined in 3D space. Converts a 3D coordinate into an LED value
-// The pattern occupies a 3D space constrained by attribute 'bounds'. 
-// 
+// Pattern defined in 3D space. Converts a 3D coordinate of an LED into a colour value
+// The pattern occupies a 3D cube of space with boundaries at +/- 'resolution' on each axis
 class SpatialPattern : public BasePattern {
 	public:
 		SpatialPattern(	
-			Point bounds,							// Point vector defining maximum magnitude of pattern space in x, y and z directions
-			unsigned int frame_delay,				// Delay between pattern frames (in ms)
-			CRGBPalette16 colour_palette=White_p,	// Colour palette to use for pattern (default to white)
-			byte duration=DEFAULT_PATTERN_DURATION	// Duration of pattern (in s)
-			): BasePattern(frame_delay, colour_palette, duration), bounds(bounds) {}
+			uint16_t resolution,					// maximum magnitude of pattern space in +/- x, y and z directions
+			CRGBPalette16 colour_palette=White_p	// Colour palette to use for pattern (default to white)
+			): BasePattern(resolution, colour_palette) {}
 
-		// Get value for LED at point coordinate. Point will be within range (+/-bounds.x, +/-bounds.y, +/-bounds.z)
-		//virtual CRGB getLEDValue(Point point);
-		//CRGB getLEDValue(unsigned int i) {}
+		// Get value for LED at point coordinate. (For SpatialPattern). 
+		virtual CRGB getLEDValue(Point point) { return CRGB::Black; }
 		
-	protected:
-		Point bounds;  // Point vector defining maximum magnitude of pattern space in x, y and z directions
 
 };
 #endif

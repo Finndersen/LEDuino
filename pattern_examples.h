@@ -4,76 +4,65 @@
 // Simple moving pulse of light along axis
 // Includes sub-pixel interpolation for smoother motion (similar to Mark Kriegsman's anti-aliased light bar example at: https://pastebin.com/yAgKs0Ay, but different implementation)
 // So instead of jumping one pixel at a time, can effectively move a fraction of a pixel with each step
-class MovingPulse: public LinearPattern  {
+template<uint16_t t_axis_len> 
+class MovingPulse: public LinearStatePattern<t_axis_len>   {
   public:
-    MovingPulse(unsigned int axis_len, unsigned int frame_delay, byte pulse_len=3, byte speed=4, CRGBPalette16 colour_palette = White_p, byte interpolation_factor=8):
-      LinearPattern(axis_len, frame_delay, colour_palette), 
-	  head_pos(0), pulse_len(pulse_len), speed(speed), interpolation_factor(interpolation_factor), tail_interpolator(Interpolator(0, 255, (pulse_len*interpolation_factor) + 1, 0))  {}
+    MovingPulse(byte pulse_len=3, byte speed=4, CRGBPalette16 colour_palette = White_p):
+      LinearStatePattern<t_axis_len>(colour_palette), 
+	  head_pos(0), pulse_len(pulse_len), speed(speed), tail_interpolator(Interpolator(0, 255, pulse_len + 1, 0))  {}
 
     // Update pulse position (on higher-resolution virtual axis)
-	// Bounds are from 0 -> axis_len*interpolation_factor
-    void frameAction()  override {
-      this->head_pos = (this->head_pos + this->speed) % (this->axis_len*this->interpolation_factor);
+	// Bounds are from 0 -> resolution*interpolation_factor
+    void frameAction(uint32_t frame_time)  override {
+      this->head_pos = (this->head_pos + this->speed) % this->resolution;
+	  for (uint16_t i=0; i<this->resolution; i++) {
+		  this->pattern_state[i] = this->get_pos_value(i);
+	  }
     }
 
     // Construct pulse from head position
-	// i is from 0 -> axis_len
-    CRGB getLEDValue(unsigned int i) override {
-		// Start with black
-		CRGB val = CRGB::Black;
-		// Get average value of all virtual sub-pixels that make up physical pixel
-		for (unsigned int vp=i*this->interpolation_factor; vp < (i+1)*this->interpolation_factor; vp++)	{
-			val += this->getVirtualLEDValue(vp)/this->interpolation_factor;
-		}
-		return val;
-      
-    }
-
-  private:
-	// Get value for pixel as position i on virtual high-resolution axis
-	// i is from 0 -> axis_len*interpolation_factor
-	CRGB getVirtualLEDValue(unsigned int i)	{
+	// i is from 0 -> resolution
+    CRGB get_pos_value(uint16_t i) {
 		// Figure out distance behind pulse head to get brightness
 		int distance_behind_head = this->head_pos - i;
 		// Case of when position is in front of pulse head so distance_behind_head is negative
 		if (distance_behind_head < 0)	{
-			distance_behind_head = (this->axis_len*this->interpolation_factor) + distance_behind_head;
+			distance_behind_head = this->resolution + distance_behind_head;
 		}
 		// If not within pulse width, return black
-		if (distance_behind_head > this->pulse_len*this->interpolation_factor)	{
+		if (distance_behind_head > this->pulse_len)	{
 			return CRGB::Black;
 		}
 		// Use interpolator to get brightness
 		byte lum = tail_interpolator.get_value(distance_behind_head);
-		byte hue = (i*255) / (this->axis_len*this->interpolation_factor);
+		byte hue = (i*255) / this->resolution; // Change colour along axis
 		return this->colorFromPalette(hue, lum);
 	}
+
+  private:
 	
-	
-    unsigned int head_pos;    			// Position of head of pulse
+    uint16_t head_pos;    			// Position of head of pulse
     byte pulse_len;        				// Length of pulse (in actual pixels). Virtual pulse width is pulse_len*interpolation_factor
 	byte speed; 						// NUmber of virtual pixels to move each step
-	byte interpolation_factor;					// Sub-pixel factor for smoother movement (higher values will require faster LED update for same pulse 'speed')
-    Interpolator tail_interpolator;  	// Interpolator for pulse tail brightness
+	Interpolator tail_interpolator;  	// Linear Interpolator for pulse tail brightness
 	
 };
 
 //Moing sine wave with randomised speed, duration and rainbow colour offset, and changes direction
-class RandomSineWave: public LinearPattern  {
+template<uint16_t t_axis_len> 
+class RandomSineWave: public LinearStatePattern<t_axis_len>  {
   public:
-    RandomSineWave(unsigned int axis_len, unsigned int frame_delay, unsigned int duration=40):
-      LinearPattern(axis_len, frame_delay, RainbowColors_p, duration) {}
+    RandomSineWave(): LinearStatePattern<t_axis_len>(RainbowColors_p) {}
 	
 	void reset() override{
-		LinearPattern::reset();
-		this->interpolation_factor = 6;
+		LinearStatePattern<t_axis_len>::reset();
+		this->interpolation_factor = 1;
 		this->pos = 0;
 		this->randomize_state();
-		
 	}
 	
 	void randomize_state() {
-		this->speed=random(3,18);
+		this->speed=random(1,12);
 		this->scale_factor = random(1,3);
 		this->direction=!this->direction;
 		this->randomize_time = random(10, 200);
@@ -81,22 +70,26 @@ class RandomSineWave: public LinearPattern  {
 		this->dim = random(0, 7) == 6;
 	}
 	
-	void frameAction()  override {
+	void frameAction(uint32_t frame_time)  override {
 		if (randomize_time) {
 			randomize_time--;
 		} else {
 			this->randomize_state();
 		}
 		if (direction) {
-			this->pos = (this->pos + this->speed) % (this->axis_len*this->interpolation_factor);
+			this->pos = (this->pos + this->speed) % (this->resolution*this->interpolation_factor);
 		} else {
-			this->pos = wrap_subtract(this->pos, this->speed, this->axis_len*this->interpolation_factor);
+			this->pos = wrap_subtract(this->pos, this->speed, this->resolution*this->interpolation_factor);
 		}
+		for (uint16_t i=0; i<this->resolution; i++) {
+		  this->pattern_state[i] = this->get_pos_value(i);
+		}
+		
 	}
 	 
-	CRGB getLEDValue(unsigned int i) override {
+	CRGB get_pos_value(uint16_t i)  {
 		
-		byte virtual_pos = (255*(i*this->interpolation_factor + this->pos))/(this->interpolation_factor*this->axis_len);
+		byte virtual_pos = (255*(i*this->interpolation_factor + this->pos))/(this->interpolation_factor*this->resolution);
 		byte val = cubicwave8((virtual_pos*this->scale_factor)%255);
 		return this->colorFromPalette((val+this->colour_offset)%255, this->dim ? val>>2 : val);
 	}
@@ -104,10 +97,10 @@ class RandomSineWave: public LinearPattern  {
 	protected:
 		byte speed;
 		bool direction=false;
-		uint8_t pos;    // Position from 0 to interpolation_factor*axis_len
-		byte interpolation_factor = 6;
+		uint8_t pos;    // Position from 0 to interpolation_factor*resolution
+		byte interpolation_factor = 1;
 		byte colour_offset;
-		unsigned int randomize_time;
+		uint16_t randomize_time;
 		byte scale_factor;
 		bool dim;  //Whether to make pattern very dim (can look cool)
 };
@@ -115,48 +108,55 @@ class RandomSineWave: public LinearPattern  {
 // Pride2015
 // Animated, ever-changing rainbows.
 // by Mark Kriegsman. https://github.com/FastLED/FastLED/blob/master/examples/Pride2015/Pride2015.ino
-template<unsigned int t_axis_len> 
+// Recommend setting resolution equal to or close to number of leds in strip segment
+template<uint16_t t_axis_len> 
 class PridePattern: public LinearStatePattern<t_axis_len>	{
 	public:
-		PridePattern(unsigned int frame_delay, uint8_t speed_factor=4, unsigned int duration=10):
-		  LinearStatePattern<t_axis_len>(frame_delay, RainbowColors_p, duration), speed_factor(speed_factor) {}
+		PridePattern(uint8_t speed_factor=4):
+		  LinearStatePattern<t_axis_len>(RainbowColors_p), speed_factor(speed_factor) {}
 		
-		void frameAction()	override {
-			static uint16_t sPseudotime = 0;
-			static uint16_t sLastMillis = 0;
-			static uint16_t sHue16 = 0;
-
+		void frameAction(uint32_t frame_time)	override {
+			static uint32_t sPseudotime = 0;  // pseudo-time elapsed since pattern start
+			static uint32_t sLastMillis = 0;  // actual time of last frame
+			static uint16_t sHue16 = 0;       // Hue offset with 16-bit resolution
+			// beatsin88 is used to get more granular low BPMs
+			// Vary saturation slightly over time
 			uint8_t sat8 = beatsin88( 87*this->speed_factor, 220, 250);
+			// varies proportion of brightness which is determined by varying sine wave, vs constant
 			uint8_t brightdepth = beatsin88( 341*this->speed_factor, 96, 224);
+			// Vary brightness increment over time (measure of wavelength)
 			uint16_t brightnessthetainc16 = beatsin88( 203*this->speed_factor, (25 * 256), (40 * 256));
+			// varying time multiplyer, for varying rate of change of hue and brightness
 			uint8_t msmultiplier = beatsin88(240*this->speed_factor, 40, 240);
 
 			uint16_t hue16 = sHue16;//gHue * 256;
+			// Vary hue increment over time (measure of rainbow colour gradient)
 			uint16_t hueinc16 = beatsin88(113*this->speed_factor, 1, 3000);
 
-			uint16_t ms = millis();
-			uint16_t deltams = ms - sLastMillis ;
-			sLastMillis  = ms;
+			uint16_t deltams = frame_time - sLastMillis ;  // Time since last frame
+			sLastMillis  = frame_time;
 			sPseudotime += deltams * msmultiplier;
+			// Increase hue offset by varying  amount
 			sHue16 += deltams * beatsin88( 400, 5,9);
+			// wave offset
 			uint16_t brightnesstheta16 = sPseudotime;
 
-			for( uint16_t i = 0 ; i < this->axis_len; i++) {
+			for( uint16_t i = 0 ; i < this->resolution; i++) {
 				hue16 += hueinc16;
 				uint8_t hue8 = hue16 / 256;
 
 				brightnesstheta16  += brightnessthetainc16;
 				uint16_t b16 = sin16( brightnesstheta16  ) + 32768;
-
+				// Perform squared scaling to make sine wave sharper
 				uint16_t bri16 = (uint32_t)((uint32_t)b16 * (uint32_t)b16) / 65536;
+				// Scale value from 0-65536 to 0-brightdepth
 				uint8_t bri8 = (uint32_t)(((uint32_t)bri16) * brightdepth) / 65536;
+				// Scale to 0-255 (add constant amount)
 				bri8 += (255 - brightdepth);
 
 				CRGB newcolor = CHSV( hue8, sat8, bri8);
-
-				uint16_t pixelnumber = (this->axis_len-1) - i;
-
-				nblend( this->pattern_state[pixelnumber], newcolor, 64);
+				
+				nblend( this->pattern_state[i], newcolor, 64);
 			}
 		}
 	protected:
@@ -164,32 +164,123 @@ class PridePattern: public LinearStatePattern<t_axis_len>	{
 };
 
 
-// Direction vectors
-Point v_x(1, 0, 0);
-Point v_y(0, 1, 0);
-Point v_z(0, 0, 1);
+// Pacifica
+//  Gentle, blue-green ocean waves.
+//  December 2019, Mark Kriegsman and Mary Corey March.
+// https://github.com/FastLED/FastLED/blob/master/examples/Pacifica/Pacifica.ino
+CRGBPalette16 pacifica_palette_1 = 
+    { 0x000507, 0x000409, 0x00030B, 0x00030D, 0x000210, 0x000212, 0x000114, 0x000117, 
+      0x000019, 0x00001C, 0x000026, 0x000031, 0x00003B, 0x000046, 0x14554B, 0x28AA50 };
+CRGBPalette16 pacifica_palette_2 = 
+    { 0x000507, 0x000409, 0x00030B, 0x00030D, 0x000210, 0x000212, 0x000114, 0x000117, 
+      0x000019, 0x00001C, 0x000026, 0x000031, 0x00003B, 0x000046, 0x0C5F52, 0x19BE5F };
+CRGBPalette16 pacifica_palette_3 = 
+    { 0x000208, 0x00030E, 0x000514, 0x00061A, 0x000820, 0x000927, 0x000B2D, 0x000C33, 
+      0x000E39, 0x001040, 0x001450, 0x001860, 0x001C70, 0x002080, 0x1040BF, 0x2060FF };
+	  
+template<uint16_t t_axis_len> 
+class PacificaPattern: public LinearStatePattern<t_axis_len>	{
+	public:
+		PacificaPattern():
+		  LinearStatePattern<t_axis_len>(White_p) {}
+		
+		void frameAction(uint32_t frame_time)	override {
+			// Increment the four "color index start" counters, one for each wave layer.
+			// Each is incremented at a different speed, and the speeds vary over time.
+			static uint16_t sCIStart1, sCIStart2, sCIStart3, sCIStart4;
+			static uint32_t sLastms = 0;
+			uint32_t deltams = frame_time - sLastms;
+			sLastms = frame_time;
+			uint16_t speedfactor1 = beatsin16(3, 179, 269);
+			uint16_t speedfactor2 = beatsin16(4, 179, 269);
+			uint32_t deltams1 = (deltams * speedfactor1) / 256;
+			uint32_t deltams2 = (deltams * speedfactor2) / 256;
+			uint32_t deltams21 = (deltams1 + deltams2) / 2;
+			sCIStart1 += (deltams1 * beatsin88(1011,10,13));
+			sCIStart2 -= (deltams21 * beatsin88(777,8,11));
+			sCIStart3 -= (deltams1 * beatsin88(501,5,7));
+			sCIStart4 -= (deltams2 * beatsin88(257,4,6));
+
+			// Clear out the LED array to a dim background blue-green
+			fill_solid(this->pattern_state, this->resolution, CRGB( 2, 6, 10));
+
+			// Render each of four layers, with different scales and speeds, that vary over time
+			this->pacifica_one_layer( pacifica_palette_1, sCIStart1, beatsin16( 3, 11 * 256, 14 * 256), beatsin8( 10, 70, 130), 0-beat16( 301) );
+			this->pacifica_one_layer( pacifica_palette_2, sCIStart2, beatsin16( 4,  6 * 256,  9 * 256), beatsin8( 17, 40,  80), beat16( 401) );
+			this->pacifica_one_layer( pacifica_palette_3, sCIStart3, 6 * 256, beatsin8( 9, 10,38), 0-beat16(503));
+			this->pacifica_one_layer( pacifica_palette_3, sCIStart4, 5 * 256, beatsin8( 8, 10,28), beat16(601));
+
+			// Add brighter 'whitecaps' where the waves lines up more
+			this->pacifica_add_whitecaps();
+
+			// Deepen the blues and greens a bit
+			this->pacifica_deepen_colors();
+		}
+	protected:
+		// Add one layer of waves into the led array
+		void pacifica_one_layer( CRGBPalette16& p, uint16_t cistart, uint16_t wavescale, uint8_t bri, uint16_t ioff)
+		{
+			uint16_t ci = cistart;
+			uint16_t waveangle = ioff;
+			uint16_t wavescale_half = (wavescale / 2) + 20;
+			for( uint16_t i = 0; i < this->resolution; i++) {
+				waveangle += 250;
+				uint16_t s16 = sin16( waveangle ) + 32768;
+				uint16_t cs = scale16( s16 , wavescale_half ) + wavescale_half;
+				ci += cs;
+				uint16_t sindex16 = sin16( ci) + 32768;
+				uint8_t sindex8 = scale16( sindex16, 240);
+				CRGB c = ColorFromPalette( p, sindex8, bri, LINEARBLEND);
+				this->pattern_state[i] += c;
+			}
+		}
+		// Add extra 'white' to areas where the four layers of light have lined up brightly
+		void pacifica_add_whitecaps()
+		{
+			uint8_t basethreshold = beatsin8( 9, 55, 65);
+			uint8_t wave = beat8( 7 );
+
+			for( uint16_t i = 0; i < this->resolution; i++) {
+				uint8_t threshold = scale8( sin8( wave), 20) + basethreshold;
+				wave += 7;
+				uint8_t l = this->pattern_state[i].getAverageLight();
+				if( l > threshold) {
+					uint8_t overage = l - threshold;
+					uint8_t overage2 = qadd8( overage, overage);
+					this->pattern_state[i] += CRGB( overage, overage2, qadd8( overage2, overage2));
+				}
+			}
+		}
+		// Deepen the blues and greens
+		void pacifica_deepen_colors()
+		{
+			for( uint16_t i = 0; i < this->resolution; i++) {
+				this->pattern_state[i].blue = scale8( this->pattern_state[i].blue,  145); 
+				this->pattern_state[i].green= scale8( this->pattern_state[i].green, 200); 
+				this->pattern_state[i] |= CRGB( 2, 5, 7);
+			}
+		}
+};
 
 
 // Plane that moves in given direction
 class SweepingPlane : public SpatialPattern  {
   public:
     SweepingPlane(
-      Point bounds,               // Point vector defining maximum magnitude of pattern space in x, y and z directions
-      unsigned int frame_delay,   // Delay between pattern frames (in ms)
-      Point direction,            // Vector defining direction of plane (normal to plane)
+      uint16_t resolution,       // maximum magnitude of pattern space in x, y and z directions
+	  Point direction,            // Vector defining direction of plane (normal to plane)
       byte thickness = 3,         // Thickness of plane
-      CRGBPalette16 colour_palette = White_p,  // Colour palette to use for pattern (default to white)
-      byte duration = DEFAULT_PATTERN_DURATION // Duration of pattern (in s)
-    ): SpatialPattern(bounds, frame_delay, colour_palette, duration), pos(-bounds), direction(direction), thickness(thickness), brightness_interpolator(Interpolator(0, 255, thickness, 0)) {
+      CRGBPalette16 colour_palette = White_p  // Colour palette to use for pattern (default to white)
+	): SpatialPattern(resolution, colour_palette), pos(Point(-1,-1,-1)*resolution), direction(direction), thickness(thickness), brightness_interpolator(Interpolator(0, 255, thickness, 0)) {
 
     };
 
-    void frameAction() override {
+    void frameAction(uint32_t frame_time) override {
       // Update position
-      pos = pos + direction;
+      this->pos = this->pos + this->direction;
       // Detect exceeding bounds
-      if ((pos.x > bounds.x) || (pos.y > bounds.y) || (pos.z > bounds.z)) {
-        pos = -bounds;
+      if ((this->pos.x > this->resolution) || (this->pos.y > this->resolution) || (this->pos.z > this->resolution)) {
+        this->pos = Point(-1, -1, -1)*this->resolution;
 
       }
     }
@@ -197,9 +288,9 @@ class SweepingPlane : public SpatialPattern  {
     // Brightness of point depends on distance to light ball
     CRGB getLEDValue(Point point)  override {
       // Get distance from point to plane
-      float distance = point.distance_to_plane(direction, pos);
+      float distance = point.distance_to_plane(this->direction, this->pos);
       byte lum = 0;
-      if (distance > thickness) {
+      if (distance > this->thickness) {
         lum = 0;
       } else  {
         lum = brightness_interpolator.get_value(distance);
@@ -241,16 +332,16 @@ void coolLikeIncandescent( CRGB& c, uint8_t phase)
 //  but the idea is the same: brightness = triwave8( time ). 
 class Twinkle : public LinearPattern  {
   public:
-    Twinkle(unsigned int axis_len, unsigned int frame_delay, CRGBPalette16 colour_palette = FairyLight_p, CRGB bg = CRGB::Black, byte twinkle_speed = 6, byte twinkle_density = 4):
-      LinearPattern(axis_len, frame_delay, colour_palette), bg(bg), bg_brightness(bg.getAverageLight()), twinkle_speed(twinkle_speed), twinkle_density(twinkle_density)  {}
+    Twinkle(uint16_t resolution, CRGBPalette16 colour_palette = FairyLight_p,  byte twinkle_speed = 6, byte twinkle_density = 4, CRGB bg = CRGB::Black):
+      LinearPattern(resolution, colour_palette), bg(bg), bg_brightness(bg.getAverageLight()), twinkle_speed(twinkle_speed), twinkle_density(twinkle_density)  {}
 
-    void frameAction() override {
+    void frameAction(uint32_t frame_time) override {
       // "PRNG16" is the pseudorandom number generator
       PRNG16 = 11337;
-      clock32 = millis();
+      clock32 = frame_time;
     }
 
-    CRGB getLEDValue(unsigned int i)  override  {
+    CRGB getLEDValue(uint16_t i)  override  {
       CRGB pixel;
       PRNG16 = (uint16_t)(PRNG16 * 2053) + 1384; // next 'random' number
       uint16_t myclockoffset16 = PRNG16; // use that number as clock offset
@@ -318,8 +409,8 @@ class Twinkle : public LinearPattern  {
 // Extends to end of strip then end follows
 class GrowThenShrink : public LinearPattern  {
 	public:
-		GrowThenShrink(unsigned int axis_len, unsigned int frame_delay, CRGBPalette16 colour_palette = RainbowColors_p):
-		LinearPattern(axis_len, frame_delay, colour_palette) {}
+		GrowThenShrink(uint16_t resolution, CRGBPalette16 colour_palette = RainbowColors_p):
+		LinearPattern(resolution, colour_palette) {}
 		
 		void reset() override {
 			LinearPattern::reset();
@@ -327,7 +418,7 @@ class GrowThenShrink : public LinearPattern  {
 			this->reverse = false;
 		}
 
-		void frameAction() override {
+		void frameAction(uint32_t frame_time) override {
 			if (this->reverse) 	{
 				if (this->tail_pos > 0)	{
 					// Extend along light strip
@@ -340,7 +431,7 @@ class GrowThenShrink : public LinearPattern  {
 					this->reverse = false;
 				}	
 			} else {
-				if (this->head_pos < this->axis_len-1)	{
+				if (this->head_pos < this->resolution-1)	{
 					// Extend along light strip
 					this->head_pos++;
 				} else if (this->tail_pos < this->head_pos) {
@@ -354,32 +445,32 @@ class GrowThenShrink : public LinearPattern  {
 
 		}
 
-		CRGB getLEDValue(unsigned int i)  override  {
+		CRGB getLEDValue(uint16_t i)  override  {
 			if ((this->tail_pos <= i) && (i <= this->head_pos)) 	{
-				return this->colorFromPalette((i*255)/this->axis_len);
+				return this->colorFromPalette((i*255)/this->resolution);
 			} else {
 				return CRGB::Black;
 			}
 		}
 	protected:
-		unsigned int head_pos, tail_pos;
+		uint16_t head_pos, tail_pos;
 		bool reverse;
 };
 		
-template<unsigned int t_axis_len> 
+template<uint16_t t_axis_len> 
 class SparkleFill : public LinearStatePattern<t_axis_len>  {
   public:
-    SparkleFill(byte frame_delay, CRGBPalette16 colour_palette=RainbowColors_p, byte duration=DEFAULT_PATTERN_DURATION):
-      LinearStatePattern<t_axis_len>(frame_delay, colour_palette, duration) {}
+    SparkleFill(CRGBPalette16 colour_palette=RainbowColors_p):
+      LinearStatePattern<t_axis_len>(colour_palette) {}
 	  
 	void reset() {
 		LinearStatePattern<t_axis_len>::reset();
 		this->fill = true;
-		this->remaining = this->axis_len;
+		this->remaining = this->resolution;
 	}
 	
-	void frameAction()	override {
-		for (unsigned int i=0; i < this->axis_len; i++) 	{
+	void frameAction(uint32_t frame_time)	override {
+		for (uint16_t i=0; i < this->resolution; i++) 	{
 			byte brightness = this->pattern_state[i].getAverageLight();
 			// Check whether pixel is candidate to be filled/unfilled
 			//if (is_filled != this->fill) 	{
@@ -408,7 +499,7 @@ class SparkleFill : public LinearStatePattern<t_axis_len>  {
 					}
 					
 					if (this->remaining == 0)	{
-						this->remaining = this->axis_len;
+						this->remaining = this->resolution;
 						this->fill = !this->fill;
 					}
 				}
@@ -420,21 +511,21 @@ class SparkleFill : public LinearStatePattern<t_axis_len>  {
 	
 	protected:
 		bool fill=true;   // Whether pattern is in fill mode (True) or un-fill
-		unsigned int remaining=t_axis_len;	// Number of remaining pixels to fill/un-fill
+		uint16_t remaining=t_axis_len;	// Number of remaining pixels to fill/un-fill
 	
 };
 
 //https://gist.github.com/kriegsman/626dca2f9d2189bd82ca
 // *Flashing* rainbow lights that zoom back and forth to a beat.
-template<unsigned int t_axis_len> 
+template<uint16_t t_axis_len> 
 class DiscoStrobe : public LinearStatePattern<t_axis_len>  {
   public:
-    DiscoStrobe(byte frame_delay, CRGBPalette16 colour_palette=HalloweenColors_p):
-      LinearStatePattern<t_axis_len>(frame_delay, colour_palette) {}
+    DiscoStrobe(CRGBPalette16 colour_palette=HalloweenColors_p):
+      LinearStatePattern<t_axis_len>(colour_palette) {}
 	
-	void frameAction()	override {
+	void frameAction(uint32_t frame_time)	override {
 		// First, we black out all the LEDs
-		fill_solid(this->pattern_state, this->axis_len, CRGB::Black);
+		fill_solid(this->pattern_state, this->resolution, CRGB::Black);
 		
 		// To achive the strobe effect, we actually only draw lit pixels
 		// every Nth frame (e.g. every 4th frame).  
@@ -568,7 +659,7 @@ class DiscoStrobe : public LinearStatePattern<t_axis_len>  {
 		  uint8_t huestart, uint8_t huedelta, uint8_t saturation, uint8_t value)
 		{
 		  uint8_t hue = huestart;
-		  for( uint16_t i = startpos; i <= this->axis_len-1; i += period) {
+		  for( uint16_t i = startpos; i <= this->resolution-1; i += period) {
 			// Switched from HSV color wheel to color palette
 			// Was: CRGB color = CHSV( hue, saturation, value); 
 			CRGB color = this->colorFromPalette(hue, value, NOBLEND);
@@ -578,7 +669,7 @@ class DiscoStrobe : public LinearStatePattern<t_axis_len>  {
 			for( uint8_t w = 0; w < width; w++) {
 			  this->pattern_state[ pos ] = color;
 			  pos++;
-			  if( pos >= this->axis_len) {
+			  if( pos >= this->resolution) {
 				break;
 			  }
 			}
@@ -599,19 +690,16 @@ class DiscoStrobe : public LinearStatePattern<t_axis_len>  {
 // Higher chance = more roaring fire.  Lower chance = more flickery fire.
 // Default 120, suggested range 50-200.
 #define SPARKING 100
-template<unsigned int t_flame_height> 
+template<uint16_t t_flame_height> 
 class SpatialFire : public SpatialPattern	{
 	public:
 		SpatialFire(
-		  Point bounds,               // Point vector defining maximum magnitude of pattern space in x, y and z directions
-		  unsigned int frame_delay,   // Delay between pattern frames (in ms)
-		  CRGBPalette16 colour_palette = HeatColors_p,  // Colour palette to use for pattern (default to white)
-		  byte duration = DEFAULT_PATTERN_DURATION // Duration of pattern (in s)
-		): SpatialPattern(bounds, frame_delay, colour_palette, duration) {
+			CRGBPalette16 colour_palette = HeatColors_p  // Colour palette to use for pattern (default to white)
+		): SpatialPattern(t_flame_height, colour_palette) {
 
 		};
 		
-	void frameAction() override {
+	void frameAction(uint32_t frame_time) override {
 		random16_add_entropy( random());
 		// Step 1.  Cool down every cell a little
 		for(byte i = 0; i < t_flame_height; i++) {
@@ -649,66 +737,3 @@ class SpatialFire : public SpatialPattern	{
 };
 
 
-//class BouncingBall : public SpatialPattern  {
-//  public:
-//    BouncingBall(
-//      Point bounds,               // Point vector defining maximum magnitude of pattern space in x, y and z directions
-//      unsigned int frame_delay,   // Delay between pattern frames (in ms)
-//      byte ball_size=6,           // Size of light ball
-//      CRGBPalette16 colour_palette=White_p,    // Colour palette to use for pattern (default to white)
-//      byte duration=DEFAULT_PATTERN_DURATION  // Duration of pattern (in s)
-//      ): SpatialPattern(bounds, frame_delay, colour_palette, duration), ball_pos(Point()) {
-//        // Randomize initial velocity proportional to bounds
-//        float bounds_size = bounds.norm()/30;
-//        velocity = Point(bounds_size*(random(0,200)/100.0 - 1.0), bounds_size*(random(0,200)/100.0 - 1.0), bounds_size*(random(0,200)/100.0 - 1.0));
-//
-//    };
-//
-//    void frameAction() override {
-//      DPRINT(ball_pos.x);
-//      DPRINT(ball_pos.y);
-//      DPRINT(ball_pos.z);
-//      DPRINT(velocity.x);
-//      DPRINT(velocity.y);
-//      DPRINT(velocity.z);
-//      // Update position
-//      ball_pos = ball_pos + velocity;
-//      // Detect bounces
-//      // Bounce off positive X face
-//      if ((ball_pos.x >= bounds.x) && (velocity.x > 0)) {
-//        velocity.x = -velocity.x;
-//      }
-//      // Bounce off negative X face
-//      if ((ball_pos.x <= -bounds.x) && (velocity.x < 0)) {
-//        velocity.x = -velocity.x;
-//      }
-//
-//      // Bounce off positive Y face
-//      if ((ball_pos.y >= bounds.y) && (velocity.y > 0)) {
-//        velocity.y = -velocity.y;
-//      }
-//      // Bounce off negative Y face
-//      if ((ball_pos.y <= -bounds.y) && (velocity.y < 0)) {
-//        velocity.y = -velocity.y;
-//      }
-//
-//      // Bounce off positive Z face
-//      if ((ball_pos.z >= bounds.z) && (velocity.z > 0)) {
-//        velocity.z = -velocity.z;
-//      }
-//      // Bounce off negative Z face
-//      if ((ball_pos.z <= -bounds.z) && (velocity.z < 0)) {
-//        velocity.z = -velocity.z;
-//      }
-//    }
-//
-//    // Brightness of point depends on distance to light ball
-//    CRGB get_led_value(Point point) {
-//      byte lum = 100 - point.distance(ball_pos)*10;//std::pow(point.distance(ball_pos),2);
-//      return CRGB(lum, lum, lum);
-//    }
-//
-//  protected:
-//    Point ball_pos;
-//    Point velocity;
-//};

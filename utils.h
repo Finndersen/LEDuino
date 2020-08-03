@@ -51,5 +51,22 @@ uint8_t attackDecayWave8( uint8_t i)
     return 255 - (i + (i/2));
   }
 }
+/*
+template <size_t num_args>
+struct unpack_caller
+{
+private:
+    template <typename FuncType, size_t... I>
+    void call(FuncType &f, std::vector<int> &args, indices<I...>){
+        f(args[I]...);
+    }
 
+public:
+    template <typename FuncType>
+    void operator () (FuncType &f, std::vector<int> &args){
+        assert(args.size() == num_args); // just to be sure
+        call(f, args, BuildIndices<num_args>{});
+    }
+};
+*/
 #endif

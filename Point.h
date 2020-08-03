@@ -68,4 +68,9 @@ inline bool operator!=(const Point& lhs, const Point& rhs){return !operator==(lh
 //inline bool operator<=(const Point& lhs, const Point& rhs){return !operator> (lhs,rhs);}
 //inline bool operator>=(const Point& lhs, const Point& rhs){return !operator< (lhs,rhs);}
 
+// Direction vectors
+Point v_x(1, 0, 0);
+Point v_y(0, 1, 0);
+Point v_z(0, 0, 1);
+
 #endif

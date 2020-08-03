@@ -58,9 +58,9 @@ class StripSegment {
 
 // Class to define spatial positioning of a strip segment for use with a SpatialPatternMapping
 // Generally want to define axis positions such that the coordinate origin is at the physical centre of your project
-class SpatialAxis {
+class SpatialStripSegment {
 	public:
-		SpatialAxis(
+		SpatialStripSegment(
 			const StripSegment strip_segment, 	// LED Strip segment for axis	
 			Point start_pos, 					// Start position of axis in 3D  (Position of first LED)
 			Point end_pos						// End position of axis in 3D space (Position of last LED)
@@ -73,9 +73,9 @@ class SpatialAxis {
 		
 		// Negation operator overloading to get reverse version of axis
 		// New axis will cover the same set of LEDs, new start_pos will be old end_pos, and direction reversed
-		SpatialAxis operator-()	{
+		SpatialStripSegment operator-()	{
 			// Reverse start and end position
-			return SpatialAxis(-(this->strip_segment), this->end_pos, this->start_pos);
+			return SpatialStripSegment(-(this->strip_segment), this->end_pos, this->start_pos);
 		}
 		
 		StripSegment strip_segment;		// LED Strip segment for axis

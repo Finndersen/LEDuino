@@ -4,7 +4,7 @@
 #ifndef LEDController_h
 #define  LEDController_h
 #include <FastLED.h>
-#include "Axis.h"
+#include "StripSegment.h"
 #include "Pattern.h"
 #include "PatternMapping.h"
 #include "utils.h"
@@ -16,7 +16,7 @@ class LEDController {
 		//Constructor
 		LEDController(
 			CRGB* leds,											// Pointer to Array of CRGB LEDs which is registered with FastLED
-			unsigned int num_leds,								// Number of LEDS (length of leds)
+			uint16_t num_leds,									// Number of LEDS (length of leds)
 			BasePatternMapping** pattern_mappings,				// Pointer to Array of points to PatternMapping configurations to run
 			byte num_patterns,									// Number of pattern configurations (length of pattern_mappings)
 			bool randomize=true									// Whether to randomize pattern order
@@ -31,54 +31,59 @@ class LEDController {
 			//static unsigned long last_frame_time;
 			//unsigned long current_time;
 			// Check if pattern config needs to be changed
-			if (this->current_mapping->pattern.expired())	{
+			if (this->current_mapping->expired() && this->auto_change_pattern)	{
 				this->setNewPatternMapping();
 			}
 			// New pattern frame
-			if (this->current_mapping->pattern.frameReady())	{
+			if (this->current_mapping->frameReady())	{
 				//current_time = millis();
 				//DPRINT("Frame delay: ");
 				//DPRINTLN(current_time - last_frame_time);
 				//last_frame_time=current_time;
 				// Run pattern frame logic
 				
-				//long pre_frame_time = millis();
+				long pre_frame_time = millis();
 				this->current_mapping->newFrame(this->leds);
-				//long pre_show_time = millis();
+				long pre_show_time = millis();
 				// Show LEDs
 				FastLED.show();
-				//DPRINT("Frame Time: ");
-				//DPRINT(pre_show_time-pre_frame_time);
-				//DPRINT(" Show time: ");
-				//DPRINTLN(millis()-pre_show_time);
+				DPRINT("Frame Time: ");
+				DPRINT(pre_show_time-pre_frame_time);
+				DPRINT(" Show time: ");
+				DPRINTLN(millis()-pre_show_time);
 			}
+		}
+		void setPatternMapping(byte mapping_id)   {
+			this->current_mapping_id = mapping_id;
+			this->current_mapping = this->pattern_mappings[mapping_id];
+			this->current_mapping->reset();
+			DPRINT("Choosing new pattern: " );
+			DPRINTLN(this->current_mapping->name);
 		}
 		
 		BasePatternMapping* current_mapping;		// Pointer to currently selected pattern
-		
+		byte current_mapping_id;
+		bool auto_change_pattern=true;
 	private:
 
 		CRGB* leds;	
-		unsigned int num_leds;
+		uint16_t num_leds;
 		BasePatternMapping** pattern_mappings;
 		byte num_patterns;
-		bool randomize;
-		byte current_mapping_id;
+		bool randomize;		
 		long last_frame_time;
 		
 		// Set ID of new pattern configuration
 		void setNewPatternMapping() {		
+			byte new_pattern_id;
 			if (this->randomize)	{
 				// Choose random pattern
-				this->current_mapping_id = random(0, this->num_patterns);
+				new_pattern_id = random(0, this->num_patterns);
 			} else {
 				// Choose next pattern
-				this->current_mapping_id = (this->current_mapping_id + 1)%(this->num_patterns);
+				new_pattern_id = (this->current_mapping_id + 1)%(this->num_patterns);
 			}
-			DPRINT("Choosing new pattern ID: " );
-			DPRINTLN(this->current_mapping_id);
-			this->current_mapping = this->pattern_mappings[current_mapping_id];
-			this->current_mapping->pattern.reset();
+			setPatternMapping(new_pattern_id);
 		}
 };
 
