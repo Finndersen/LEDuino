@@ -2,6 +2,7 @@
 #define  Point_h
 
 #include <cmath>
+#include <float.h>
 #include "utils.h"
 
 
@@ -37,6 +38,8 @@ struct Point {
 	Point operator*(const float &RHS) { return Point(*this) *= RHS; };
 	Point operator/(const float &RHS) { return Point(*this) /= RHS; };
 	
+	// Element-wise multiplication
+	Point hadamard(const Point &RHS) {return Point(this->x*RHS.x, this->y*RHS.y, this->z*RHS.z); };
 	// Negation
 	Point operator-() const {return Point(-x, -y, -z); };
 	
@@ -63,6 +66,8 @@ struct Point {
 // Implement binary operators as free (non-member) functions to enable symmetry
 inline bool operator==(const Point& lhs, const Point& rhs){ return lhs.x==rhs.x && lhs.y==rhs.y && lhs.z==rhs.z; }
 inline bool operator!=(const Point& lhs, const Point& rhs){return !operator==(lhs,rhs);}
+inline Point operator/(const float &lhs, const Point &rhs) { return Point(lhs/rhs.x, lhs/rhs.y, lhs/rhs.z); }
+inline Point operator*(const float &lhs, Point &rhs) { return rhs*lhs; }
 //inline bool operator< (const Point& lhs, const Point& rhs){ /* do actual comparison */ }
 //inline bool operator> (const Point& lhs, const Point& rhs){return  operator< (rhs,lhs);}
 //inline bool operator<=(const Point& lhs, const Point& rhs){return !operator> (lhs,rhs);}
@@ -72,5 +77,7 @@ inline bool operator!=(const Point& lhs, const Point& rhs){return !operator==(lh
 Point v_x(1, 0, 0);
 Point v_y(0, 1, 0);
 Point v_z(0, 0, 1);
+
+Point undefinedPoint(FLT_MIN, FLT_MIN, FLT_MIN);
 
 #endif

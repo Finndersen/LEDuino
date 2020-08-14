@@ -15,8 +15,7 @@ class BasePattern	{
 			CRGBPalette16 colour_palette=White_p		// Colour palette to use for pattern (default to white)
 			): resolution(resolution), colour_palette(colour_palette), initial_palette(colour_palette) {} 
 			
-		
-		
+			
 		// Initialise/Reset pattern state
 		virtual void reset() {};
 		
@@ -33,7 +32,7 @@ class BasePattern	{
 		
 		// Contains main logic for pattern.
 		// Provides time in ms since pattern started 		
-		virtual void frameAction(unsigned long frame_time)=0;
+		virtual void frameAction(unsigned long frame_time) {};
 		
 		uint16_t resolution;
 	protected:

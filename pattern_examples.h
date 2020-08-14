@@ -693,9 +693,7 @@ class DiscoStrobe : public LinearStatePattern<t_axis_len>  {
 template<uint16_t t_flame_height> 
 class SpatialFire : public SpatialPattern	{
 	public:
-		SpatialFire(
-			CRGBPalette16 colour_palette = HeatColors_p  // Colour palette to use for pattern (default to white)
-		): SpatialPattern(t_flame_height, colour_palette) {
+		SpatialFire(): SpatialPattern(t_flame_height, HeatColors_p) {
 
 		};
 		
@@ -719,10 +717,10 @@ class SpatialFire : public SpatialPattern	{
 	}
 	
 	CRGB getLEDValue(Point point)  override {
-		// Get heat value by y-coordinate (-bounds.z -> bounds.z to 0 -> buonds.z*2)
+		// Get heat value by y-coordinate (-resolution -> resolution to 0 -> resolution*2)
 		// Scale the heat value from 0-255 down to 0-240
 		// for best results with color palettes.
-		byte heat_index = (int) (this->bounds.z + point.z+0.5);
+		byte heat_index = (int) (this->resolution + point.z+0.5);
 		byte colorindex = scale8(this->heat[heat_index], 240);
 		// Constrain base heat
 		if (heat_index == 0)	{

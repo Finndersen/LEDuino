@@ -79,7 +79,7 @@ class SpatialStripSegment {
 		}
 		
 		StripSegment strip_segment;		// LED Strip segment for axis
-	protected:
+
 		Point start_pos;	// Start position of axis in 3D space
 		Point end_pos;		// End position of axis in 3D space
 		Point step;			// Direction vector of axis with length equal to distance between LEDS on axis

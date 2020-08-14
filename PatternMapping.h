@@ -50,9 +50,9 @@ class BasePatternMapping {
 		const char* name;  // Name or description of pattern
 	protected:
 		unsigned long frame_time;			// Time since pattern started (in ms)
-		uint16_t frame_delay;				// Delay between pattern frames (in ms)
 		unsigned long start_time;			// Absolute time pattern was initialised (in ms)
 		uint16_t duration;  				// Duration of pattern mapping configuration (seconds)
+		uint16_t frame_delay;				// Delay between pattern frames (in ms)
 
 };
 
@@ -67,8 +67,8 @@ class LinearPatternMapping: public BasePatternMapping {
 			StripSegment* strip_segments,	// Pointer to Array of StripSegment to map pattern to
 			byte num_segments,				// Number of axes (length of strip_segments)
 			uint16_t frame_delay,  			// Delay between pattern frames (in ms)
-			uint16_t duration=DEFAULT_DURATION,
-			const char* name='LinearPatternMapping' // Name to give this pattern configuration
+			const char* name="LinearPatternMapping", // Name to give this pattern configuration
+			uint16_t duration=DEFAULT_DURATION
 		): BasePatternMapping(frame_delay, duration, name), pattern(pattern), strip_segments(strip_segments), num_segments(num_segments) {}
 
 		// Initialise/Reset pattern state
@@ -133,28 +133,71 @@ class LinearPatternMapping: public BasePatternMapping {
 		// Reset palette of underlying pattern(s) to one it was initialised with
 		virtual void resetPalette()	{
 			this->pattern.resetPalette();
-		};
-		
-		LinearPattern& pattern;
+		};		
 		
 	protected:
+		LinearPattern& pattern;
 		StripSegment* strip_segments;
 		byte num_segments;				// Number of configured strip segments to map pattern to
 
 };
 
 // Class for defininig mapping configuration of 3DPattern to set of axes with spatial positioning
+// The SpatialPattern has its own coordinate system (bounds of +/- resolution on each axis),
+// and there is also the physical project coordinate system (the spatial positions of LEDS as defined in SpatialStripSegments)
+// The 'scale' and 'offset' vectors are used to map the pattern coordinate system to project space
+// If not specified, scale is calcualted automatically based on bounds of SpatialStripSegment, and offset is 0-vector
 class SpatialPatternMapping: public BasePatternMapping {
 	public:
 		// Constructor
 		SpatialPatternMapping(
-			SpatialPattern& pattern,   				// Reference to SpatialPattern object
-			SpatialStripSegment* spatial_segments,	// Pointer to Array of SpatialStripSegment to map pattern to
-			byte num_segments,						// Number of SpatialStripSegments (length of spatial_segments)
-			uint16_t frame_delay,  			// Delay between pattern frames (in ms)
-			uint16_t duration=DEFAULT_DURATION,
-			const char* name='SpatialPatternMapping' 			// Name to give this pattern configuration
-		): BasePatternMapping(frame_delay, duration, name), pattern(pattern), spatial_segments(spatial_segments), num_segments(num_segments)	{}
+			SpatialPattern& pattern,   					// Reference to SpatialPattern object
+			SpatialStripSegment* spatial_segments,		// Pointer to Array of SpatialStripSegment to map pattern to
+			byte num_segments,							// Number of SpatialStripSegments (length of spatial_segments)
+			uint16_t frame_delay,  						// Delay between pattern frames (in ms)
+			const char* name="SpatialPatternMapping", 	// Name to give this pattern configuration
+			uint16_t duration=DEFAULT_DURATION,			
+			Point offset=undefinedPoint,				// Translational offset to apply to Project coordinate system before scaling
+			Point scale=undefinedPoint					// Scaling factor to apply to Project coordinate system to map to Pattern coordinates
+		): BasePatternMapping(frame_delay, duration, name), pattern(pattern), spatial_segments(spatial_segments), num_segments(num_segments)	{
+			// Calculate Project space scale
+			Point project_scale;			
+			float min_x = FLT_MAX, min_y = FLT_MAX, min_z = FLT_MAX;
+			float max_x = FLT_MIN, max_y = FLT_MIN, max_z = FLT_MIN;
+			for (byte i=0; i<num_segments; i++) {
+				SpatialStripSegment spatial_segment = spatial_segments[i];
+				// Update minimums
+				if (spatial_segment.start_pos.x < min_x) 	min_x = spatial_segment.start_pos.x;
+				if (spatial_segment.end_pos.x < min_x) 		min_x = spatial_segment.end_pos.x;
+				
+				if (spatial_segment.start_pos.y < min_y) 	min_y = spatial_segment.start_pos.y;
+				if (spatial_segment.end_pos.y < min_y) 		min_y = spatial_segment.end_pos.y;
+				
+				if (spatial_segment.start_pos.z < min_z) 	min_z = spatial_segment.start_pos.z;
+				if (spatial_segment.end_pos.z < min_z) 		min_z = spatial_segment.end_pos.z;
+				
+				// Update maximums
+				if (spatial_segment.start_pos.x > max_x) 	max_x = spatial_segment.start_pos.x;
+				if (spatial_segment.end_pos.x > max_x) 		max_x = spatial_segment.end_pos.x;
+				
+				if (spatial_segment.start_pos.y > max_y) 	max_y = spatial_segment.start_pos.y;
+				if (spatial_segment.end_pos.y > max_y) 		max_y = spatial_segment.end_pos.y;
+				
+				if (spatial_segment.start_pos.z > max_z) 	max_z = spatial_segment.start_pos.z;
+				if (spatial_segment.end_pos.z > max_z) 		max_z = spatial_segment.end_pos.z;
+			}
+			// Set automatically if not specified	
+			if (scale == undefinedPoint) {
+				this->scale_factors = pattern.resolution/Point(max_x - min_x, max_y - min_y, max_z - min_z);
+			} else {
+				this->scale_factors = pattern.resolution/scale;
+			}
+			if (offset == undefinedPoint) {
+				this->offset = -Point(max_x + min_x, max_y + min_y, max_z + min_z)/2;
+			} else {
+				this->offset = offset;
+			}
+		}
 		
 		// Initialise/Reset pattern state
 		virtual void reset() override {		
@@ -176,8 +219,10 @@ class SpatialPatternMapping: public BasePatternMapping {
 					Point pos = axis.getSpatialPosition(axis_pos);
 					// Get LED ID from strip segment
 					uint16_t led_id = axis.strip_segment.getLEDId(axis_pos);
+					// Translate spatial position to pattern coordinates
+					Point pattern_pos = (pos + this->offset).hadamard(this->scale_factors);
 					// Get value from pattern
-					leds[led_id] = this->pattern.getLEDValue(pos);
+					leds[led_id] = this->pattern.getLEDValue(pattern_pos);
 				}
 			}
 		}
@@ -190,12 +235,14 @@ class SpatialPatternMapping: public BasePatternMapping {
 		// Reset palette of underlying pattern(s) to one it was initialised with
 		virtual void resetPalette()	{
 			this->pattern.resetPalette();
-		};
+		};		
 		
-		SpatialPattern& pattern;
 	protected:
+		SpatialPattern& pattern;
 		SpatialStripSegment* spatial_segments;
 		byte num_segments;						// Number of configured strip segments to map pattern to
+		Point offset;  // Offset of Pattern space from Project space (in Project coordinates, before scaling applied)
+		Point scale_factors; 	// Scaling vector for Project space to Pattern space transformation
 };
 
 // Allows for multiple pattern mappings to be applied at the same time
