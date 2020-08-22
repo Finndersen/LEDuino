@@ -17,15 +17,18 @@ class LEDController {
 		LEDController(
 			CRGB* leds,											// Pointer to Array of CRGB LEDs which is registered with FastLED
 			uint16_t num_leds,									// Number of LEDS (length of leds)
-			BasePatternMapping** pattern_mappings,				// Pointer to Array of points to PatternMapping configurations to run
+			BasePatternMapping** pattern_mappings,				// Pointer to Array of pointers to PatternMapping configurations to run
 			byte num_patterns,									// Number of pattern configurations (length of pattern_mappings)
 			bool randomize=true									// Whether to randomize pattern order
 			):  leds(leds), num_leds(num_leds), pattern_mappings(pattern_mappings), num_patterns(num_patterns), randomize(randomize) {
 			// Initialise as max for immediate overflow to 0 at start
 			this->current_mapping_id = num_patterns-1;
+		}
+		void initialise() {
 			// Set initial pattern
 			this->setNewPatternMapping();
 		}
+		
 		// Run pattern newFrame() if ready, set new pattern if required
 		void loop() {
 			//static unsigned long last_frame_time;
@@ -42,23 +45,23 @@ class LEDController {
 				//last_frame_time=current_time;
 				// Run pattern frame logic
 				
-				long pre_frame_time = millis();
+				//long pre_frame_time = millis();
 				this->current_mapping->newFrame(this->leds);
-				long pre_show_time = millis();
+				//long pre_show_time = millis();
 				// Show LEDs
 				FastLED.show();
-				DPRINT("Frame Time: ");
-				DPRINT(pre_show_time-pre_frame_time);
-				DPRINT(" Show time: ");
-				DPRINTLN(millis()-pre_show_time);
+				//DPRINT("Frame Time: ");
+				//DPRINT(pre_show_time-pre_frame_time);
+				//DPRINT(" Show time: ");
+				//DPRINTLN(millis()-pre_show_time);
 			}
 		}
 		void setPatternMapping(byte mapping_id)   {
 			this->current_mapping_id = mapping_id;
 			this->current_mapping = this->pattern_mappings[mapping_id];
-			this->current_mapping->reset();
 			DPRINT("Choosing new pattern: " );
 			DPRINTLN(this->current_mapping->name);
+			this->current_mapping->reset();
 		}
 		
 		BasePatternMapping* current_mapping;		// Pointer to currently selected pattern

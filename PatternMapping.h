@@ -72,7 +72,8 @@ class LinearPatternMapping: public BasePatternMapping {
 		): BasePatternMapping(frame_delay, duration, name), pattern(pattern), strip_segments(strip_segments), num_segments(num_segments) {}
 
 		// Initialise/Reset pattern state
-		virtual void reset() override {		
+		virtual void reset() override {
+			DPRINTLN("Linear Reset");
 			BasePatternMapping::reset();
 			this->pattern.reset();
 		};
@@ -251,43 +252,44 @@ class MultiplePatternMapping : public BasePatternMapping {
 	public:
 		// Constructor
 		MultiplePatternMapping(
-			BasePatternMapping* mappings,	// Pointer to Array of SpatialStripSegment to map pattern to
-			byte num_mappings,				// Number of axes (length of spatial_segments)
+			BasePatternMapping** mappings,	// Pointer to Array of pointers to other PatternMappings to apply
+			byte num_mappings,				// Number of Pattern Mappings (length of mappings)
 			uint16_t frame_delay,  			// Delay between pattern frames (in ms)
-			uint16_t duration=DEFAULT_DURATION,
-			const char* name="MultiplePatternMapping" 			// Name to give this pattern configuration
+			const char* name="MultiplePatternMapping", 			// Name to give this pattern configuration
+			uint16_t duration=DEFAULT_DURATION
 		): BasePatternMapping(frame_delay, duration, name), mappings(mappings), num_mappings(num_mappings)	{}
 
 		// Initialise/Reset pattern state
-		virtual void reset() override {		
+		virtual void reset() override {	
 			BasePatternMapping::reset();
 			for (byte i=0; i < this->num_mappings; i++) {
-				this->mappings[i].reset();
+				this->mappings[i]->reset();
 			}
 		};
 		
 		// Excute new frame of all pattern mappings
 		void newFrame(CRGB* leds)	override {
-			for (byte i=0; i < this->num_mappings; i++) {
-				this->mappings[i].newFrame(leds);
+			BasePatternMapping::newFrame(leds);
+			for (byte i=0; i < this->num_mappings; i++) {				
+				this->mappings[i]->newFrame(leds);
 			}
 		}
 		
 		// Set palette of underlying pattern(s)
 		virtual void setPalette(CRGBPalette16 new_palette)	{
 			for (byte i=0; i < this->num_mappings; i++) {
-				this->mappings[i].setPalette(new_palette);
+				this->mappings[i]->setPalette(new_palette);
 			}
 		};
 		
 		// Reset palette of underlying pattern(s) to one it was initialised with
 		virtual void resetPalette()	{
 			for (byte i=0; i < this->num_mappings; i++) {
-				this->mappings[i].resetPalette();
+				this->mappings[i]->resetPalette();
 			}
 		};
 	protected:
-		BasePatternMapping* mappings;
+		BasePatternMapping** mappings;
 		byte num_mappings;
 };
 #endif
