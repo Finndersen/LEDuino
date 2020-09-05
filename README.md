@@ -14,10 +14,11 @@ This is a framework or set of components which make it easy to define animated p
  3. Rename folder to LEDController
  4. Restart Arduino IDE
 
+## Tutorial
 
 
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbMTgxMDQ4ODQxNCwyMTIxMTA1NDQxLC05Nj
+eyJoaXN0b3J5IjpbMTc1MDUyNjcyMiwyMTIxMTA1NDQxLC05Nj
 U4MDQwMjcsNTc1NjM1ODY2LC0xNjIyMDM4NTkxLDM5MDA3ODky
 XX0=
 -->
