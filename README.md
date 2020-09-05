@@ -15,10 +15,10 @@ This is a framework or set of components which make it easy to define animated p
  4. Restart Arduino IDE
 
 ## Tutorial
-
+The best way to explain how to use the library is probably with a simple example. 
 
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbMTc1MDUyNjcyMiwyMTIxMTA1NDQxLC05Nj
-U4MDQwMjcsNTc1NjM1ODY2LC0xNjIyMDM4NTkxLDM5MDA3ODky
-XX0=
+eyJoaXN0b3J5IjpbMzIzNzc0OTAwLDIxMjExMDU0NDEsLTk2NT
+gwNDAyNyw1NzU2MzU4NjYsLTE2MjIwMzg1OTEsMzkwMDc4OTJd
+fQ==
 -->
