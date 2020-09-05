@@ -1,5 +1,5 @@
 # LEDController
-This is a frame
+This is a framework or set of components 
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbMTA5MDkwNzM3NF19
+eyJoaXN0b3J5IjpbLTExNzIzNTM1MzVdfQ==
 -->
