@@ -10,10 +10,14 @@ This is a framework or set of components which make it easy to define animated p
 ## Installation
 
  1. Download library from [here](https://github.com/Finndersen/LEDController/archive/master.zip).
- 2. Unzip and move to Arduino library folder 
+ 2. Unzip and move to Arduino library folder (e.g. Documents/Arduino/libraries/)
+ 3. Rename folder to LEDController
+ 4. Restart Arduino IDE
+
+
 
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbMTgyNzY0MDMwOSwyMTIxMTA1NDQxLC05Nj
+eyJoaXN0b3J5IjpbMTgxMDQ4ODQxNCwyMTIxMTA1NDQxLC05Nj
 U4MDQwMjcsNTc1NjM1ODY2LC0xNjIyMDM4NTkxLDM5MDA3ODky
 XX0=
 -->
