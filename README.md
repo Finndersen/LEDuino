@@ -1,5 +1,5 @@
 # LEDController
-This is a framework or set of components which make it easy to define animated patterns and map them to segments of an LED strip controlled by an Arduino. It's useful for more complex LED projects (infinity mirrors etc) that involve multiple changing patterns and 
+This is a framework or set of components which make it easy to define animated patterns and map them to segments of an LED strip controlled by an Arduino. It helps with developing more complex LED projects (infinity mirrors etc) that involve multiple changing patterns and 
 
 ## **Requirements**
 
@@ -8,6 +8,6 @@ This is a framework or set of components which make it easy to define animated p
  - Individually addressable LED strip compatible with FastLED (e.g. Neopixel, WS2801, WS2811, WS2812B, LPD8806, TM1809, and [more](https://github.com/FastLED/FastLED/wiki/Chipset-reference))
 
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbLTE0MTc1MjMyMzEsNTc1NjM1ODY2LC0xNj
-IyMDM4NTkxLDM5MDA3ODkyXX0=
+eyJoaXN0b3J5IjpbLTk2NTgwNDAyNyw1NzU2MzU4NjYsLTE2Mj
+IwMzg1OTEsMzkwMDc4OTJdfQ==
 -->
