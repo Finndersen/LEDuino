@@ -3,8 +3,8 @@ This is a framework or set of components which make it easy to define animated p
 
 **Requirements**
 
- - Ardunio-compatible 
+ - Ardunio-compatible micocontroller. 
 
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbNjIyMjQ5MTMwXX0=
+eyJoaXN0b3J5IjpbMzkwMDc4OTJdfQ==
 -->
