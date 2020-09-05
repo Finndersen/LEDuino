@@ -1,5 +1,5 @@
 # LED Pattern Controller
-This is a framework or set of components which make it easy to define animated patterns and map them to segments of an LED strip controlled by an Arduino. It helps with developing more complex LED projects (infinity mirrors etc) that involve multiple changing patterns and arrangements of LED strips.
+This is a framework or set of components which make it easy to define animated patterns and map them to segments of an LED strip controlled by an Arduino. It helps with developing more complex LED projects (infinity mirrors etc) that involve multiple changing patterns and arrangements of LED strips. It supports both 1-dimensional patterns (defined in terms of distance along a single axis) as well as 3D spatial patterns (defined in terms of 3D coordinate),  
 
 ## Requirements
 
@@ -18,7 +18,7 @@ This is a framework or set of components which make it easy to define animated p
 The best way to explain how to use the library is probably with a simple example. 
 
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbMzIzNzc0OTAwLDIxMjExMDU0NDEsLTk2NT
-gwNDAyNyw1NzU2MzU4NjYsLTE2MjIwMzg1OTEsMzkwMDc4OTJd
-fQ==
+eyJoaXN0b3J5IjpbLTEwNzg2OTA5NSwyMTIxMTA1NDQxLC05Nj
+U4MDQwMjcsNTc1NjM1ODY2LC0xNjIyMDM4NTkxLDM5MDA3ODky
+XX0=
 -->
