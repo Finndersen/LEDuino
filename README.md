@@ -23,9 +23,9 @@ It consists of a single LED strip (44 LEDs total), divided into 4 segments (of l
 You might want to define a collection of animation patterns which are each mapped and repeated to each LED segment for a nice consistent, symmetric effect, instead of just a single pattern applied to the entire strip. That's what this library helps you do.
 
 **Define Segments**
-The first step is to define each segment (corresponding to each edge of the rectangle) in terms of their position on the LED strip. This is done by creating instances of 
+The first step is to define each segment (corresponding to each edge of the rectangle) in terms of their position on the LED strip. This is done by creating instances of `StripSegment` and specifying the segment start position and length.
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbLTYwNjk4Nzg0MSwxNzg1MDIxNDExLC04Mj
-A2MDU4NzMsMjEyMTEwNTQ0MSwtOTY1ODA0MDI3LDU3NTYzNTg2
-NiwtMTYyMjAzODU5MSwzOTAwNzg5Ml19
+eyJoaXN0b3J5IjpbLTE2NDIwNjczMjYsMTc4NTAyMTQxMSwtOD
+IwNjA1ODczLDIxMjExMDU0NDEsLTk2NTgwNDAyNyw1NzU2MzU4
+NjYsLTE2MjIwMzg1OTEsMzkwMDc4OTJdfQ==
 -->
