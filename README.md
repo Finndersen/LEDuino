@@ -37,11 +37,11 @@ The first step is to define each segment (corresponding to each edge of the rect
     StripSegment segment_3(VERTICAL_SEGMENT_LEN + HORIZONTAL_SEGMENT_LEN, VERTICAL_SEGMENT_LEN, TOTAL_LEDS);
     StripSegment segment_4(2*VERTICAL_SEGMENT_LEN + HORIZONTAL_SEGMENT_LEN, HORIZONTAL_SEGMENT_LEN, TOTAL_LEDS);
 
-> Note: The total strip length is provided to each StripSegment to allow wrap-around 
+> Note: The total strip length is provided to each StripSegment to allow wrap-around of a segment from the end of the strip back to the start if desired. There is also an optional 4th parameter 'reverse' which allows 
 
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbLTc1MzQzNDM1NiwtMTA4MzEwOTU2MiwtMT
-Y0MjA2NzMyNiwxNzg1MDIxNDExLC04MjA2MDU4NzMsMjEyMTEw
-NTQ0MSwtOTY1ODA0MDI3LDU3NTYzNTg2NiwtMTYyMjAzODU5MS
-wzOTAwNzg5Ml19
+eyJoaXN0b3J5IjpbNTkwODQxOTQxLC0xMDgzMTA5NTYyLC0xNj
+QyMDY3MzI2LDE3ODUwMjE0MTEsLTgyMDYwNTg3MywyMTIxMTA1
+NDQxLC05NjU4MDQwMjcsNTc1NjM1ODY2LC0xNjIyMDM4NTkxLD
+M5MDA3ODkyXX0=
 -->
