@@ -18,9 +18,9 @@ This is a framework or set of components which make it easy to define animated p
 The best way to explain how to use the library is probably with a simple example, in this case a rectangular infinity mirror or picture frame with an LED strip running along each edge. 
 
 ![enter image description here](https://i.imgur.com/1QFJoiz.png)
-
+It consists of a single LED strip (44 LEDs total), divided into 4 segments (one for each edge of the rectangle). 
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbOTQzMTc5NTIyLDE3ODUwMjE0MTEsLTgyMD
-YwNTg3MywyMTIxMTA1NDQxLC05NjU4MDQwMjcsNTc1NjM1ODY2
-LC0xNjIyMDM4NTkxLDM5MDA3ODkyXX0=
+eyJoaXN0b3J5IjpbMTQ2MDYwNjIxNSwxNzg1MDIxNDExLC04Mj
+A2MDU4NzMsMjEyMTEwNTQ0MSwtOTY1ODA0MDI3LDU3NTYzNTg2
+NiwtMTYyMjAzODU5MSwzOTAwNzg5Ml19
 -->
