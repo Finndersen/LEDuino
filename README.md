@@ -23,24 +23,24 @@ It consists of a single LED strip (44 LEDs total), divided into 4 segments (of l
 You might want to define a collection of animation patterns which are each mapped and repeated to each LED segment for a nice consistent, symmetric effect, instead of just a single pattern applied to the entire strip. That's what this library helps you do.
 
 **Define Segments**
-The first step is to define each segment (corresponding to each edge of the rectangle) in terms of their position on the LED strip. This is done by creating instances of `StripSegment` and specifying the segment start position, length and total number of LEDs.
+The first step is to define each segment (corresponding to each edge of the rectangle) in terms of their position on the LED strip. This is done by creating instances of `StripSegment` and specifying the segment start position, length and total number of LEDs. The segments are numbered 1 to 4, starting with the vertical one on the right and going counter-clockwise. 
 
-#include <FastLED.h>
-#include <LEDController.h>
-
-#define VERTICAL_SEGMENT_LEN 8      // Number of LEDS on vertical segments
-#define HORIZONTAL_SEGMENT_LEN 14   // Number of LEDS on horizontal segments
-#define TOTAL_LEDS VERTICAL_SEGMENT_LEN*2 + HORIZONTAL_SEGMENT_LEN*2
-
-StripSegment segment_1(0, VERTICAL_SEGMENT_LEN, TOTAL_LEDS);
-StripSegment segment_2(VERTICAL_SEGMENT_LEN, HORIZONTAL_SEGMENT_LEN, TOTAL_LEDS);
-StripSegment segment_3(VERTICAL_SEGMENT_LEN + HORIZONTAL_SEGMENT_LEN, VERTICAL_SEGMENT_LEN, TOTAL_LEDS);
-StripSegment segment_4(2*VERTICAL_SEGMENT_LEN + HORIZONTAL_SEGMENT_LEN, HORIZONTAL_SEGMENT_LEN, TOTAL_LEDS);
+    #include <FastLED.h>
+    #include <LEDController.h>
+    
+    #define VERTICAL_SEGMENT_LEN 8      // Number of LEDS on vertical segments
+    #define HORIZONTAL_SEGMENT_LEN 14   // Number of LEDS on horizontal segments
+    #define TOTAL_LEDS VERTICAL_SEGMENT_LEN*2 + HORIZONTAL_SEGMENT_LEN*2
+    
+    StripSegment segment_1(0, VERTICAL_SEGMENT_LEN, TOTAL_LEDS);
+    StripSegment segment_2(VERTICAL_SEGMENT_LEN, HORIZONTAL_SEGMENT_LEN, TOTAL_LEDS);
+    StripSegment segment_3(VERTICAL_SEGMENT_LEN + HORIZONTAL_SEGMENT_LEN, VERTICAL_SEGMENT_LEN, TOTAL_LEDS);
+    StripSegment segment_4(2*VERTICAL_SEGMENT_LEN + HORIZONTAL_SEGMENT_LEN, HORIZONTAL_SEGMENT_LEN, TOTAL_LEDS);
 
 
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbMTE1NDI2OTA5MSwtMTA4MzEwOTU2MiwtMT
-Y0MjA2NzMyNiwxNzg1MDIxNDExLC04MjA2MDU4NzMsMjEyMTEw
-NTQ0MSwtOTY1ODA0MDI3LDU3NTYzNTg2NiwtMTYyMjAzODU5MS
-wzOTAwNzg5Ml19
+eyJoaXN0b3J5IjpbLTE2MDM2MTYyMjMsLTEwODMxMDk1NjIsLT
+E2NDIwNjczMjYsMTc4NTAyMTQxMSwtODIwNjA1ODczLDIxMjEx
+MDU0NDEsLTk2NTgwNDAyNyw1NzU2MzU4NjYsLTE2MjIwMzg1OT
+EsMzkwMDc4OTJdfQ==
 -->
