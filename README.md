@@ -17,8 +17,10 @@ This is a framework or set of components which make it easy to define animated p
 ## Tutorial
 The best way to explain how to use the library is probably with a simple example. 
 
+![enter image description here](https://i.imgur.com/1QFJoiz.png)
+
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbLTgyMDYwNTg3MywyMTIxMTA1NDQxLC05Nj
-U4MDQwMjcsNTc1NjM1ODY2LC0xNjIyMDM4NTkxLDM5MDA3ODky
-XX0=
+eyJoaXN0b3J5IjpbMTc4NTAyMTQxMSwtODIwNjA1ODczLDIxMj
+ExMDU0NDEsLTk2NTgwNDAyNyw1NzU2MzU4NjYsLTE2MjIwMzg1
+OTEsMzkwMDc4OTJdfQ==
 -->
