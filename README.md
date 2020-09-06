@@ -15,12 +15,12 @@ This is a framework or set of components which make it easy to define animated p
  4. Restart Arduino IDE
 
 ## Tutorial
-The best way to explain how to use the library is probably with a simple example, in this case a 
+The best way to explain how to use the library is probably with a simple example, in this case a rectangular infinity mirror or picture frame with an LED strip running along each edge. 
 
 ![enter image description here](https://i.imgur.com/1QFJoiz.png)
 
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbLTg2NDYxNjkxMywxNzg1MDIxNDExLC04Mj
-A2MDU4NzMsMjEyMTEwNTQ0MSwtOTY1ODA0MDI3LDU3NTYzNTg2
-NiwtMTYyMjAzODU5MSwzOTAwNzg5Ml19
+eyJoaXN0b3J5IjpbOTQzMTc5NTIyLDE3ODUwMjE0MTEsLTgyMD
+YwNTg3MywyMTIxMTA1NDQxLC05NjU4MDQwMjcsNTc1NjM1ODY2
+LC0xNjIyMDM4NTkxLDM5MDA3ODkyXX0=
 -->
