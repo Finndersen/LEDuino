@@ -37,11 +37,11 @@ The first step is to define each segment (corresponding to each edge of the rect
     StripSegment segment_3(VERTICAL_SEGMENT_LEN + HORIZONTAL_SEGMENT_LEN, VERTICAL_SEGMENT_LEN, TOTAL_LEDS);
     StripSegment segment_4(2*VERTICAL_SEGMENT_LEN + HORIZONTAL_SEGMENT_LEN, HORIZONTAL_SEGMENT_LEN, TOTAL_LEDS);
 
-> Note: The total strip length is provided to each StripSegment to allow wrap-around of a segment from the end of the strip back to the start if desired. There is also an optional 4th boolean parameter 'reverse' which indicates whether the segment should progress in the opposite direction to the 
+> Note: The total strip length is provided to each StripSegment to allow wrap-around of a segment from the end of the strip back to the start if desired. There is also an optional 4th boolean parameter 'reverse' which indicates whether the segment should progress in the opposite direction to the LED numbering on the strip. 
 
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbMjY4Mjg3ODYsLTEwODMxMDk1NjIsLTE2ND
-IwNjczMjYsMTc4NTAyMTQxMSwtODIwNjA1ODczLDIxMjExMDU0
-NDEsLTk2NTgwNDAyNyw1NzU2MzU4NjYsLTE2MjIwMzg1OTEsMz
-kwMDc4OTJdfQ==
+eyJoaXN0b3J5IjpbLTUwOTgwMDM2LC0xMDgzMTA5NTYyLC0xNj
+QyMDY3MzI2LDE3ODUwMjE0MTEsLTgyMDYwNTg3MywyMTIxMTA1
+NDQxLC05NjU4MDQwMjcsNTc1NjM1ODY2LC0xNjIyMDM4NTkxLD
+M5MDA3ODkyXX0=
 -->
