@@ -19,9 +19,9 @@ The best way to explain how to use the library is probably with a simple example
 
 ![enter image description here](https://i.imgur.com/1QFJoiz.png)
 It consists of a single LED strip (44 LEDs total), divided into 4 segments (one for each edge of the rectangle). The LED strip is controlled by an Arduino (the single wire shown represents the data line, the two power wires are omitted).
-What you might want to do is define a collection of animation patterns 
+What you might want to do is define a collection of animation patterns which are each mapped and repeated to each LED segment 
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbLTgxNDA1Njg1NywxNzg1MDIxNDExLC04Mj
+eyJoaXN0b3J5IjpbLTY1NDM3ODUxMSwxNzg1MDIxNDExLC04Mj
 A2MDU4NzMsMjEyMTEwNTQ0MSwtOTY1ODA0MDI3LDU3NTYzNTg2
 NiwtMTYyMjAzODU5MSwzOTAwNzg5Ml19
 -->
