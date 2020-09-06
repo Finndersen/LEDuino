@@ -18,11 +18,12 @@ This is a framework or set of components which make it easy to define animated p
 The best way to explain how to use the library is probably with a simple example, in this case a rectangular infinity mirror or picture frame with an LED strip running along each edge. 
 
 ![enter image description here](https://i.imgur.com/1QFJoiz.png)
-It consists of a single LED strip (44 LEDs total), divided into 4 segments (one for each edge of the rectangle). The LED strip is controlled by an Arduino (the single wire shown represents the data line, the two power wires are omitted).
+It consists of a single LED strip (44 LEDs total), divided into 4 segments (of length 8 and 14, one for each edge of the rectangle). The LED strip is controlled by an Arduino (the single wire shown represents the data line, the two power wires are omitted).
 
-You might want to define a collection of animation patterns which are each mapped and repeated to each LED segment for a nice consistent, symmetric effect, instead of just a single pattern applied to the entire strip. This is what the library will help you do.
+You might want to define a collection of animation patterns which are each mapped and repeated to each LED segment for a nice consistent, symmetric effect, instead of just a single pattern applied to the entire strip. That's what this library helps you do.
+
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbLTE0MjY5Mzk2NjYsMTc4NTAyMTQxMSwtOD
-IwNjA1ODczLDIxMjExMDU0NDEsLTk2NTgwNDAyNyw1NzU2MzU4
-NjYsLTE2MjIwMzg1OTEsMzkwMDc4OTJdfQ==
+eyJoaXN0b3J5IjpbMTUyMzEyMTk2NiwxNzg1MDIxNDExLC04Mj
+A2MDU4NzMsMjEyMTEwNTQ0MSwtOTY1ODA0MDI3LDU3NTYzNTg2
+NiwtMTYyMjAzODU5MSwzOTAwNzg5Ml19
 -->
