@@ -17,18 +17,18 @@ class StripSegment {
 			): start_offset(start_offset), segment_len(segment_len), strip_len(strip_len), reverse(reverse) {
 		}
 		// Get LED Strip ID from segment value
-		unsigned int getLEDId(unsigned int axis_value){
+		unsigned int getLEDId(unsigned int segment_pos){
 			int led_id;
 			// Limit value to maximum length
-			if (axis_value > this->segment_len)	{
-				axis_value = this->segment_len;
+			if (segment_pos > this->segment_len)	{
+				segment_pos = this->segment_len;
 			}
 			if (this->reverse)  {
 				// Detect wrap around from 0 back to end of LED strip
-				led_id = wrap_subtract(this->start_offset, axis_value+1, this->strip_len-1);
+				led_id = wrap_subtract(this->start_offset, segment_pos+1, this->strip_len-1);
 			} else {
 				// Modulo with strip len to enable wrap-around
-				led_id = (this->start_offset + axis_value)%this->strip_len;
+				led_id = (this->start_offset + segment_pos)%this->strip_len;
 			}
 			
 			return (unsigned int) led_id; //constrain(led_id, start_offset, start_offset+len)

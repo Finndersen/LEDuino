@@ -1,8 +1,8 @@
 /*
   Full implementations in header file due to issues with templated classes and linking...
 */
-#ifndef LEDController_h
-#define  LEDController_h
+#ifndef PatternController_h
+#define  PatternController_h
 #include <FastLED.h>
 #include "StripSegment.h"
 #include "Pattern.h"
@@ -11,10 +11,10 @@
 #include "pattern_examples.h"
 
 // Controller object which applies pattern LED values to appropriate axes
-class LEDController {
+class PatternController {
 	public:
 		//Constructor
-		LEDController(
+		PatternController(
 			CRGB* leds,											// Pointer to Array of CRGB LEDs which is registered with FastLED
 			uint16_t num_leds,									// Number of LEDS (length of leds)
 			BasePatternMapping** pattern_mappings,				// Pointer to Array of pointers to PatternMapping configurations to run

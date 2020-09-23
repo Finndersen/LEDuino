@@ -50,9 +50,9 @@ class MovingPulse: public LinearStatePattern<t_axis_len>   {
 
 //Moing sine wave with randomised speed, duration and rainbow colour offset, and changes direction
 template<uint16_t t_axis_len> 
-class RandomSineWave: public LinearStatePattern<t_axis_len>  {
+class RandomRainbows: public LinearStatePattern<t_axis_len>  {
   public:
-    RandomSineWave(): LinearStatePattern<t_axis_len>(RainbowColors_p) {}
+    RandomRainbows(): LinearStatePattern<t_axis_len>(RainbowColors_p) {}
 	
 	void reset() override{
 		LinearStatePattern<t_axis_len>::reset();
@@ -268,7 +268,7 @@ class SweepingPlane : public SpatialPattern  {
   public:
     SweepingPlane(
       uint16_t resolution,       // maximum magnitude of pattern space in x, y and z directions
-	  Point direction,            // Vector defining direction of plane (normal to plane)
+	  Point direction,            // Vector defining direction of plane (normal to plane) and speed of movement
       byte thickness = 3,         // Thickness of plane
       CRGBPalette16 colour_palette = White_p  // Colour palette to use for pattern (default to white)
 	): SpatialPattern(resolution, colour_palette), pos(Point(-1,-1,-1)*resolution), direction(direction), thickness(thickness), brightness_interpolator(Interpolator(0, 255, thickness, 0)) {
@@ -278,9 +278,18 @@ class SweepingPlane : public SpatialPattern  {
     void frameAction(uint32_t frame_time) override {
       // Update position
       this->pos = this->pos + this->direction;
-      // Detect exceeding bounds
+      // Detect exceeding positive bounds
       if ((this->pos.x > this->resolution) || (this->pos.y > this->resolution) || (this->pos.z > this->resolution)) {
-        this->pos = Point(-1, -1, -1)*this->resolution;
+        // Reset back to start
+		//this->pos = Point(-1, -1, -1)*this->resolution;
+		this->direction = -this->direction;
+
+      }
+	  // Detect exceeding negative bounds
+      if ((this->pos.x < -this->resolution) || (this->pos.y < -this->resolution) || (this->pos.z < -this->resolution)) {
+        // Reset back to start
+		//this->pos = Point(-1, -1, -1)*this->resolution;
+		this->direction = -this->direction;
 
       }
     }
@@ -295,7 +304,11 @@ class SweepingPlane : public SpatialPattern  {
       } else  {
         lum = brightness_interpolator.get_value(distance);
       }
-      return CRGB(lum, lum, lum);
+	  // Scale hue proportional to position
+	  uint8_t hue = constrain((255*this->pos.norm())/(this->direction.norm() * this->resolution), 0, 255);
+	  return this->colorFromPalette(hue, lum, NOBLEND);
+	  
+      //return CRGB(lum, lum, lum);
     }
 
   protected:
@@ -329,27 +342,32 @@ void coolLikeIncandescent( CRGB& c, uint8_t phase)
 //  So the way this implementation works is that every pixel follows
 //  the exact same wave function over time.  In this particular case,
 //  I chose a sawtooth triangle wave (triwave8) rather than a sine wave,
-//  but the idea is the same: brightness = triwave8( time ). 
-class Twinkle : public LinearPattern  {
+//  but the idea is the same: brightness = triwave8( time ).
+template<uint16_t t_axis_len> 
+class Twinkle : public LinearStatePattern<t_axis_len>   {
   public:
-    Twinkle(uint16_t resolution, CRGBPalette16 colour_palette = FairyLight_p,  byte twinkle_speed = 6, byte twinkle_density = 4, CRGB bg = CRGB::Black):
-      LinearPattern(resolution, colour_palette), bg(bg), bg_brightness(bg.getAverageLight()), twinkle_speed(twinkle_speed), twinkle_density(twinkle_density)  {}
+    Twinkle(byte twinkle_speed = 6, CRGBPalette16 colour_palette = FairyLight_p, byte twinkle_density = 4, CRGB bg = CRGB::Black):
+      LinearStatePattern<t_axis_len>(colour_palette), bg(bg), bg_brightness(bg.getAverageLight()), twinkle_speed(twinkle_speed), twinkle_density(twinkle_density)  {}
 
     void frameAction(uint32_t frame_time) override {
-      // "PRNG16" is the pseudorandom number generator
-      PRNG16 = 11337;
-      clock32 = frame_time;
+		// "this->PRNG16" is the pseudorandom number generator
+		this->PRNG16 = 11337;
+		this->clock32 = frame_time;
+		// Set pattern state
+		for (uint16_t i=0; i<this->resolution; i++) {
+		  this->pattern_state[i] = this->get_pos_value(i);
+		}
     }
 
-    CRGB getLEDValue(uint16_t i)  override  {
+    CRGB get_pos_value(uint16_t i)  {
       CRGB pixel;
-      PRNG16 = (uint16_t)(PRNG16 * 2053) + 1384; // next 'random' number
-      uint16_t myclockoffset16 = PRNG16; // use that number as clock offset
-      PRNG16 = (uint16_t)(PRNG16 * 2053) + 1384; // next 'random' number
+      this->PRNG16 = (uint16_t)(this->PRNG16 * 2053) + 1384; // next 'random' number
+      uint16_t myclockoffset16 = this->PRNG16; // use that number as clock offset
+      this->PRNG16 = (uint16_t)(this->PRNG16 * 2053) + 1384; // next 'random' number
       // use that number as clock speed adjustment factor (in 8ths, from 8/8ths to 23/8ths)
-      uint8_t myspeedmultiplierQ5_3 =  ((((PRNG16 & 0xFF) >> 4) + (PRNG16 & 0x0F)) & 0x0F) + 0x08;
-      uint32_t myclock30 = (uint32_t)((clock32 * myspeedmultiplierQ5_3) >> 3) + myclockoffset16;
-      uint8_t  myunique8 = PRNG16 >> 8; // get 'salt' value for this pixel
+      uint8_t myspeedmultiplierQ5_3 =  ((((this->PRNG16 & 0xFF) >> 4) + (this->PRNG16 & 0x0F)) & 0x0F) + 0x08;
+      uint32_t myclock30 = (uint32_t)((this->clock32 * myspeedmultiplierQ5_3) >> 3) + myclockoffset16;
+      uint8_t  myunique8 = this->PRNG16 >> 8; // get 'salt' value for this pixel
 
       // We now have the adjusted 'clock' for this pixel, now we call
       // the function that computes what color the pixel should be based
@@ -682,46 +700,61 @@ class DiscoStrobe : public LinearStatePattern<t_axis_len>  {
 
 //https://github.com/FastLED/FastLED/blob/master/examples/Fire2012WithPalette/Fire2012WithPalette.ino
 // COOLING: How much does the air cool as it rises?
-// Less cooling = taller flames.  More cooling = shorter flames.
-// Default 55, suggested range 20-100 
-#define COOLING  65
+
+// 
+#define COOLING  40
 
 // SPARKING: What chance (out of 255) is there that a new spark will be lit?
-// Higher chance = more roaring fire.  Lower chance = more flickery fire.
-// Default 120, suggested range 50-200.
-#define SPARKING 100
-template<uint16_t t_flame_height> 
+
+#define SPARKING 120
+template<uint16_t t_resolution> 
 class SpatialFire : public SpatialPattern	{
 	public:
-		SpatialFire(): SpatialPattern(t_flame_height, HeatColors_p) {
+		SpatialFire(uint8_t cooling=60, uint8_t sparking=100): 
+		SpatialPattern(t_resolution, CRGBPalette16( CRGB::Black, CRGB::Red, CRGB::Yellow, CRGB::White)),
+		cooling(cooling),  	// Less cooling = taller flames.  More cooling = shorter flames. Default 55, suggested range 20-100 
+		sparking(sparking)  // Higher chance = more roaring fire.  Lower chance = more flickery fire. Default 120, suggested range 50-200.
+		{
 
 		};
 		
+	virtual void reset()	override {
+		SpatialPattern::reset();
+		// Reset pattern state array to black
+		for (byte i=0; i<t_resolution*2; i++) {
+			this->heat[i] = CRGB::Black;
+		}	
+	}
+		
 	void frameAction(uint32_t frame_time) override {
-		random16_add_entropy( random());
+		uint16_t flame_height = t_resolution*2+1;
+		random16_add_entropy(random());
 		// Step 1.  Cool down every cell a little
-		for(byte i = 0; i < t_flame_height; i++) {
-		  this->heat[i] = qsub8( this->heat[i],  random8(0, ((COOLING * 10) / t_flame_height) + 2));
+		for(uint8_t i = 0; i < flame_height; i++) {
+		  this->heat[i] = qsub8( this->heat[i],  random8(0, ((this->cooling * 10) / flame_height) + 2));
 		}
 	  
 		// Step 2.  Heat from each cell drifts 'up' and diffuses a little
-		for( byte k= t_flame_height - 1; k >= 2; k--) {
-		  this->heat[k] = (this->heat[k - 1] + this->heat[k - 2] + this->heat[k - 2] ) / 3;
+		for(uint8_t k= flame_height - 1; k >= 2; k--) {
+		  this->heat[k] = (this->heat[k - 1] + 2*this->heat[k - 2]) / 3;
 		}
 		
 		// Step 3.  Randomly ignite new 'sparks' of heat near the bottom
-		if( random8() < SPARKING ) {
-		  byte y = random8(7);
-		  this->heat[y] = qadd8( this->heat[y], random8(160,255) );
+		if(random8() < this->sparking ) {
+		  uint8_t y = random8(flame_height/5 + 1);
+		  this->heat[y] = qadd8( this->heat[y], random8(160,220) );
 		}
 	}
 	
 	CRGB getLEDValue(Point point)  override {
-		// Get heat value by y-coordinate (-resolution -> resolution to 0 -> resolution*2)
+		// Get heat value by z-coordinate (-resolution -> resolution to 0 -> resolution*2)
 		// Scale the heat value from 0-255 down to 0-240
 		// for best results with color palettes.
-		byte heat_index = (int) (this->resolution + point.z+0.5);
-		byte colorindex = scale8(this->heat[heat_index], 240);
+		//DPRINT(point.x);
+		//DPRINT(point.y);
+		
+		uint8_t heat_index = (int) (this->resolution + point.z);
+		uint8_t colorindex = scale8(this->heat[heat_index], 240);
 		// Constrain base heat
 		if (heat_index == 0)	{
 			colorindex = constrain(colorindex, 40, 120);
@@ -730,7 +763,9 @@ class SpatialFire : public SpatialPattern	{
 	}
 	
 	protected:
-		byte heat[t_flame_height];
+		uint8_t heat[t_resolution*2+1]; // Array to store heat values
+		uint8_t sparking;
+		uint8_t cooling; 
 	
 };
 

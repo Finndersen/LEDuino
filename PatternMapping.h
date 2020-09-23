@@ -189,9 +189,9 @@ class SpatialPatternMapping: public BasePatternMapping {
 			}
 			// Set automatically if not specified	
 			if (scale == undefinedPoint) {
-				this->scale_factors = pattern.resolution/Point(max_x - min_x, max_y - min_y, max_z - min_z);
+				this->scale_factors = 2*pattern.resolution/Point(max_x - min_x, max_y - min_y, max_z - min_z);
 			} else {
-				this->scale_factors = pattern.resolution/scale;
+				this->scale_factors = 2*pattern.resolution/scale;
 			}
 			if (offset == undefinedPoint) {
 				this->offset = -Point(max_x + min_x, max_y + min_y, max_z + min_z)/2;

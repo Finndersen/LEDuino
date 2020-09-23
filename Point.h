@@ -45,7 +45,7 @@ struct Point {
 	
 	// Euclidean norm
 	float norm() const { 
-		return std::sqrt(std::pow(x, 2) + std::pow(y, 2) + std::pow(z, 2)); 
+		return std::sqrt(x*x + y*y + z*z); 
 	};
 	
 	// Calculate distance of this point from plane defined by a normal vector and point
