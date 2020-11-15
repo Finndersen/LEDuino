@@ -80,4 +80,30 @@ Point v_z(0, 0, 1);
 
 Point undefinedPoint(FLT_MIN, FLT_MIN, FLT_MIN);
 
+// Class to define bounding box (rectangular prism) defined by minimum (bottom left) and maximum (top right) points
+class Bounds {
+	public: 
+		Bounds(Point min, Point max): min(min), max(max) {}
+		
+		// Get vector which represents magnitude of bounds in each coordinate (width, length and depth)
+		Point magnitude() {
+			return Point(this->max.x - this->min.x, this->max.y - this->min.y, this->max.z - this->min.z);
+		}
+		
+		// Centre point of bounds
+		Point centre() {
+			return Point(this->max.x + this->min.x, this->max.y + this->min.y, this->max.z + this->min.z)/2;
+		}
+		
+		// Whether or not point is contained in bounds
+		bool contains(Point point) {
+			return ((point.x <= this->max.x) && (point.x >= this->min.x) &&
+					(point.y <= this->max.y) && (point.y >= this->min.y) &&
+					(point.z <= this->max.z) && (point.z >= this->min.z)
+			);
+		}
+		Point min, max;
+};
+
+
 #endif

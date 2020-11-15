@@ -1,4 +1,4 @@
-# LED Pattern Controller
+# LED Pattern Mapper
 This is a framework or set of components which make it easy to define animated patterns and map them to segments of an LED strip controlled by an Arduino. It helps with developing more complex LED projects (infinity mirrors etc) that involve multiple changing patterns and arrangements of LED strips. It supports both 1-dimensional patterns (defined in terms of distance along a single axis) as well as 3D spatial patterns (defined in terms of 3D coordinate), and handles scaling and interpolation. 
 
 ## Requirements
@@ -26,7 +26,7 @@ You might want to define a collection of animation patterns which are each mappe
 The first step is to define each segment (corresponding to each edge of the rectangle) in terms of their position on the LED strip. This is done by creating instances of `StripSegment` and specifying the segment start position, length and total number of LEDs. The segments are numbered 1 to 4, starting with the vertical one on the right and going counter-clockwise. 
 
     #include <FastLED.h>
-    #include <LEDController.h>
+    #include <LEDPatternMapper.h>
     
     #define VERTICAL_SEGMENT_LEN 8      // Number of LEDS on vertical segments
     #define HORIZONTAL_SEGMENT_LEN 14   // Number of LEDS on horizontal segments
