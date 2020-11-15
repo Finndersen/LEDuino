@@ -1,5 +1,7 @@
-# LED Pattern Controller
+# LED Pattern Mapper
 This is a framework or set of components which make it easy to define animated patterns and map them to segments of an LED strip controlled by an Arduino. It helps with developing more complex LED projects (infinity mirrors etc) that involve multiple changing patterns and arrangements of LED strips. It supports both 1-dimensional patterns (defined in terms of distance along a single axis) as well as 3D spatial patterns (defined in terms of 3D coordinate), and handles scaling and interpolation. 
+
+NOTE: This is a project I have developed for my own personal use but figured could be quite useful to others as well, so it has not been tested extensively in many configurations.
 
 ## Requirements
 
@@ -11,7 +13,7 @@ This is a framework or set of components which make it easy to define animated p
 
  1. Download library from [here](https://github.com/Finndersen/LEDController/archive/master.zip).
  2. Unzip and move to Arduino library folder (e.g. Documents/Arduino/libraries/)
- 3. Rename folder to LEDController
+ 3. Rename folder to LEDPatternMapper
  4. Restart Arduino IDE
 
 ## Getting Started
