@@ -697,4 +697,45 @@ class FirePattern: public LinearPattern   {
 	
 };
 
-
+class GrowingSphere: public SpatialPattern	{
+	public:
+		GrowingSphere(
+			uint8_t speed=1,
+			CRGBPalette16 colour_palette=RainbowColors_p
+		) : SpatialPattern(colour_palette), speed(speed) {}
+		
+		void reset()	override {
+			SpatialPattern::reset();
+			this->radius = 0;
+			this->growing = true;
+		}
+		
+		
+		void frameAction(uint32_t frame_time) override {
+			if (this->growing) {
+				this->radius += this->speed;
+				if (this->radius >= this->resolution)	{
+					this->growing = false;
+				}
+			} else {
+				if (this->radius <= this->speed) {
+					this->growing = true;
+				} else {
+					this->radius -= this->speed;
+				}
+			}
+		}
+		
+		CRGB getLEDValue(Point point) override { 
+			float point_distance = point.norm();
+			if (point_distance > this->radius) 	{
+				return CRGB::Black;
+			} else {
+				return this->colorFromPalette((255*point_distance)/this->resolution);
+			}
+		}
+	private:
+		uint8_t speed; 		// Speed at which sphere grows and shrinks
+		uint16_t radius;   	// Current radius of sphere
+		bool growing;		// Whether sphere is growing or shrinking
+};

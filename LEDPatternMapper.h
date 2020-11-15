@@ -56,6 +56,7 @@ class PatternController {
 				//DPRINTLN(millis()-pre_show_time);
 			}
 		}
+		// Set current active pattern mapper by array index
 		void setPatternMapping(byte mapping_id)   {
 			this->current_mapping_id = mapping_id;
 			this->current_mapping = this->pattern_mappings[mapping_id];

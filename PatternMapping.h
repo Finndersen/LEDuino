@@ -189,22 +189,19 @@ class SpatialPatternMapping: public BasePatternMapping {
 			const char* name="SpatialPatternMapping", 	// Name to give this pattern configuration
 			uint16_t duration=DEFAULT_DURATION,			
 			Point offset=undefinedPoint,				// Translational offset to apply to Project coordinate system before scaling
-			Point scale=undefinedPoint					// Scaling factor to apply to Project coordinate system to map to Pattern coordinates
-		): BasePatternMapping(frame_delay, duration, name), pattern(pattern), spatial_segments(spatial_segments), num_segments(num_segments)	{
+			Point scale_factors=undefinedPoint			// Scaling factors to apply to Project coordinate system to map to Pattern coordinates
+		): BasePatternMapping(frame_delay, duration, name), pattern(pattern), spatial_segments(spatial_segments), num_segments(num_segments), offset(offset), scale_factors(scale_factors)	{
 			// Calculate Project space scale
-			Point project_scale;
-			Bounds bounds = get_spatial_segment_bounds(spatial_segments, num_segments);
+			Bounds project_bounds = get_spatial_segment_bounds(spatial_segments, num_segments);
+			this->project_centroid = project_bounds.centre();
 			
-			// Set automatically if not specified	
-			if (scale == undefinedPoint) {
-				this->scale_factors = 2*pattern.resolution/bounds.magnitude();
-			} else {
-				this->scale_factors = 2*pattern.resolution/scale;
-			}
-			if (offset == undefinedPoint) {
-				this->offset = -bounds.centre();
-			} else {
-				this->offset = offset;
+			// Set automatically if not specified (scale project bounds to fit pattern space)
+			if (this->scale_factors == undefinedPoint) {
+				this->scale_factors = project_bounds.magnitude()/(2*pattern.resolution);
+			} 
+			// Default offset to centre of project bounds so it is translated to be centered on origin of pattern space
+			if (this->offset == undefinedPoint) {
+				this->offset = this->project_centroid;
 			}
 		}
 		
@@ -229,7 +226,7 @@ class SpatialPatternMapping: public BasePatternMapping {
 					// Get LED ID from strip segment
 					uint16_t led_id = axis.strip_segment.getLEDId(axis_pos);
 					// Translate spatial position to pattern coordinates
-					Point pattern_pos = (pos + this->offset).hadamard(this->scale_factors);
+					Point pattern_pos = (pos - this->offset).hadamard_divide(this->scale_factors);
 					// Get value from pattern
 					leds[led_id] = this->pattern.getLEDValue(pattern_pos);
 				}
@@ -249,9 +246,10 @@ class SpatialPatternMapping: public BasePatternMapping {
 	protected:
 		SpatialPattern& pattern;
 		SpatialStripSegment* spatial_segments;
-		byte num_segments;						// Number of configured strip segments to map pattern to
-		Point offset;  // Offset of Pattern space from Project space (in Project coordinates, before scaling applied)
+		byte num_segments;		// Number of configured strip segments to map pattern to
+		Point offset;  			// Offset of Pattern space from Project space (in Project coordinates, before scaling applied)
 		Point scale_factors; 	// Scaling vector for Project space to Pattern space transformation
+		Point project_centroid; // Centre point of project coordinate bounds
 };
 
 // Allows for mapping a linear pattern to a vector in 3D space
