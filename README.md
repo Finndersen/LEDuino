@@ -9,6 +9,15 @@ This is a framework or set of components which make it easy to define animated p
 
 NOTE: This is a project I have developed for my own personal use but figured could be quite useful to others as well, so it has not been tested extensively in many configurations. Please let me know if you have any issues or ideas!
 
+## Demonstration
+The below video demonstrates the same simple moving, colour changing pulse pattern being mapped in 3 different ways to my Infinity Cube project. 
+
+[![InfinityCubePulseMapping](https://i.imgur.com/is2atVj.gif)](https://www.youtube.com/watch?v=DZlHctGWVvo "InfinityCubePulseMapping")
+
+1. Linear mapped to each axis in positive direction (same pattern repeated on all edges, all pulses originate in same corner and move outwards then terminate at the end)
+2. Same as #1 but one axis is reversed (looks like pulses are moving continuously and split or merge at corners).
+3. Spatial mapping - instead of being mapped to each edge separately,  the pulse moves along a spatial vector from the top right to the bottom left corners of the cube, moving along the different edges as required
+
 ## Requirements
 
  - Ardunio-compatible micocontroller. At least 32kB of RAM and decent CPU is recommended depending on the complexity of your project, a [Teensy 3.1+](https://www.pjrc.com/teensy/index.html) works great.
