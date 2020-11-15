@@ -12,6 +12,8 @@ struct Point {
 	
 	//Initialise explicitly
 	Point(float x, float y, float z): x(x), y(y), z(z)	{};
+	// 2D (z default to 0)
+	Point(float x, float y): x(x), y(y), z(0)	{};
 	// Initialise from array
 	Point(float* arr): x(arr[0]), y(arr[1]), z(arr[2])	{};
 	// Default constructor

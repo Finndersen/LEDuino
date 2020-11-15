@@ -60,15 +60,15 @@ class LinearPattern: public BasePattern	{
 		
 };
 
-// Base class for linear pattern which uses an array of length t_axis_len to store state 
+// Base class for linear pattern which uses an array of length t_resolution to store state 
 // Used for more complex patterns that need to use detailed state from previous frame
-template<uint16_t t_axis_len> 
+template<uint16_t t_resolution> 
 class LinearStatePattern : public LinearPattern	{
 	public:
 		// Constructor
 		LinearStatePattern(	
 			CRGBPalette16 colour_palette=White_p		// Colour palette to use for pattern (default to white)
-		): LinearPattern(t_axis_len, colour_palette) {
+		): LinearPattern(t_resolution, colour_palette) {
 				
 			}
 		
@@ -85,7 +85,7 @@ class LinearStatePattern : public LinearPattern	{
 			return this->pattern_state[i];
 		}
 	protected:
-		CRGB pattern_state[t_axis_len];					// Contains LED values for pattern
+		CRGB pattern_state[t_resolution];					// Contains LED values for pattern
 };
 
 
@@ -94,8 +94,8 @@ class LinearStatePattern : public LinearPattern	{
 class SpatialPattern : public BasePattern {
 	public:
 		SpatialPattern(	
-			uint16_t resolution,					// maximum magnitude of pattern space in +/- x, y and z directions
-			CRGBPalette16 colour_palette=White_p	// Colour palette to use for pattern (default to white)
+			CRGBPalette16 colour_palette=White_p,	// Colour palette to use for pattern (default to white)
+			uint16_t resolution=100				// maximum magnitude of pattern space in +/- x, y and z directions
 			): BasePattern(resolution, colour_palette) {}
 
 		// Get value for LED at point coordinate. (For SpatialPattern). 
