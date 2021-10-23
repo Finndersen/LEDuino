@@ -8,6 +8,8 @@
   #define DPRINTLN(...)   //now defines a blank line
 #endif
 
+#define sgn(x) ((x > 0) - (x < 0))
+
 // Simple linear interpolation class
 class Interpolator	{
 	public:

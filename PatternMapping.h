@@ -88,10 +88,14 @@ class LinearPatternMapping: public BasePatternMapping {
 			for (byte seg_id=0; seg_id<this->num_segments; seg_id++) {
 				StripSegment& strip_segment = this->strip_segments[seg_id];
 				uint16_t s = strip_segment.segment_len;
-				// Perform downsampling of pattern data to strip segment
+				// Perform downsampling of pattern data to strip segment. 
+				// Basically trying to scale pattern of length p onto LED segment of length s
+				// To represent weights using integers, each pattern pixel will be weighted out of segment length s
+				// A value of 's' corresponds to weighting of 1 and means the entire pattern pixel contributes to the value of the strip segment LED
+				// The total weight of all pattern pixels for a strip segment LED is equal to p (pattern length)
 				for (uint16_t led_ind=0; led_ind<s; led_ind++) 	{
 					
-					// GEt index of first pattern pixel to downsample
+					// Get index of first pattern virtual pixel to downsample
 					uint16_t start_index = (led_ind*p)/s;
 					// Weighting to use on first pattern pixel 
 					uint16_t first_weight = s - (led_ind*p - start_index*s);
@@ -177,7 +181,7 @@ Bounds get_spatial_segment_bounds(SpatialStripSegment* spatial_segments, byte nu
 // The SpatialPattern has its own coordinate system (bounds of +/- resolution on each axis),
 // and there is also the physical project coordinate system (the spatial positions of LEDS as defined in SpatialStripSegments)
 // The 'scale' and 'offset' vectors are used to map the pattern coordinate system to project space
-// If not specified, scale is calcualted automatically based on bounds of SpatialStripSegment, and offset is 0-vector
+// If not specified, scale is calcualted automatically based on bounds of SpatialStripSegment, and offset is equal to project centroid
 class SpatialPatternMapping: public BasePatternMapping {
 	public:
 		// Constructor
@@ -273,10 +277,8 @@ class LinearToSpatialPatternMapping : public BasePatternMapping {
 			Point bounds_size = bounds.magnitude();
 			// Get length of linear pattern path (scale factor * length of pattern_vector through spatial bounding box) 
 			this->path_length = scale * (abs(pattern_vector.x*bounds_size.x) + abs(pattern_vector.y*bounds_size.y) + abs(pattern_vector.z*bounds_size.z))/pattern_vector.norm();
-			// Get end position of pattern path (centre of bounds + path_length/2 in direction of pattern_vector)
+			// Get start position of pattern path (centre of bounds - path_length/2 in direction of pattern_vector)
 			this->path_start_pos = bounds.centre() - pattern_vector * (this->path_length/(2*pattern_vector.norm()));
-
-			
 		}
 		
 		
@@ -313,7 +315,7 @@ class LinearToSpatialPatternMapping : public BasePatternMapping {
 					uint16_t led_id = axis.strip_segment.getLEDId(axis_pos);
 					// Get spatial position of LED
 					Point pos = axis.getSpatialPosition(axis_pos);
-					// Get distance of LED from plane through pattern path end position
+					// Get distance of LED from plane through pattern path start position
 					float dist_from_start = pos.distance_to_plane(this->pattern_vector, this->path_start_pos);
 					// Get pattern value at same proportional position along pattern axis
 					// For now just round to nearest, could do interpolation between two
