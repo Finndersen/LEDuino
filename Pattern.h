@@ -95,7 +95,7 @@ class SpatialPattern : public BasePattern {
 	public:
 		SpatialPattern(	
 			CRGBPalette16 colour_palette=White_p,	// Colour palette to use for pattern (default to white)
-			uint16_t resolution=100				// maximum magnitude of pattern space in +/- x, y and z directions
+			uint16_t resolution=256				// maximum magnitude of pattern space in +/- x, y and z directions
 			): BasePattern(resolution, colour_palette) {}
 
 		// Get value for LED at point coordinate. (For SpatialPattern). 

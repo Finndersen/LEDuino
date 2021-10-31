@@ -10,6 +10,11 @@
 
 #define sgn(x) ((x > 0) - (x < 0))
 
+#define same_sign(x, y) ((x<0) == (y<0))
+
+// Check whether a is between x and y 
+#define between(a, x, y) (y >= x ? (a >= x && a <= y) : (a >= y && a <= x))
+
 // Simple linear interpolation class
 class Interpolator	{
 	public:
@@ -34,15 +39,16 @@ unsigned int wrap_subtract(unsigned int value, unsigned int subtract, unsigned i
 	}
 }
 
-// This function is like 'triwave8', which produces a 
-// symmetrical up-and-down triangle sawtooth waveform, except that this
-// function produces a triangle wave with a faster attack and a slower decay:
-//
-//     / \ 
-//    /     \ 
-//   /         \ 
-//  /             \ 
-//
+/*
+This function is like 'triwave8', which produces a 
+ symmetrical up-and-down triangle sawtooth waveform, except that this
+ function produces a triangle wave with a faster attack and a slower decay:
+
+     / \ 
+    /    \ 
+   /       \ 
+  /          \ 
+*/
 
 uint8_t attackDecayWave8( uint8_t i)
 {

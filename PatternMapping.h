@@ -65,7 +65,7 @@ class LinearPatternMapping: public BasePatternMapping {
 		LinearPatternMapping(
 			LinearPattern& pattern,   		// LinearPattern object
 			StripSegment* strip_segments,	// Pointer to Array of StripSegment to map pattern to
-			byte num_segments,				// Number of axes (length of strip_segments)
+			uint8_t num_segments,				// Number of axes (length of strip_segments)
 			uint16_t frame_delay,  			// Delay between pattern frames (in ms)
 			const char* name="LinearPatternMapping", // Name to give this pattern configuration
 			uint16_t duration=DEFAULT_DURATION
@@ -85,7 +85,7 @@ class LinearPatternMapping: public BasePatternMapping {
 			
 			uint16_t p = this->pattern.resolution;			
 			// Loop through all strip segments
-			for (byte seg_id=0; seg_id<this->num_segments; seg_id++) {
+			for (uint8_t seg_id=0; seg_id<this->num_segments; seg_id++) {
 				StripSegment& strip_segment = this->strip_segments[seg_id];
 				uint16_t s = strip_segment.segment_len;
 				// Perform downsampling of pattern data to strip segment. 
@@ -142,17 +142,17 @@ class LinearPatternMapping: public BasePatternMapping {
 	protected:
 		LinearPattern& pattern;
 		StripSegment* strip_segments;
-		byte num_segments;				// Number of configured strip segments to map pattern to
+		uint8_t num_segments;				// Number of configured strip segments to map pattern to
 
 };
 
 
 // Get the bounding box of a collection of Spatial Segments
-Bounds get_spatial_segment_bounds(SpatialStripSegment* spatial_segments, byte num_segments) {
-	Point min = Point(FLT_MAX, FLT_MAX, FLT_MAX);
-	Point max = Point(FLT_MIN, FLT_MIN, FLT_MIN);
+Bounds get_spatial_segment_bounds(SpatialStripSegment* spatial_segments, uint8_t num_segments) {
+	Point min = Point(32767, 32767, 32767);
+	Point max = Point(-32768, -32768, -32768);
 	
-	for (byte i=0; i<num_segments; i++) {
+	for (uint8_t i=0; i<num_segments; i++) {
 		SpatialStripSegment spatial_segment = spatial_segments[i];
 		// Update minimums
 		if (spatial_segment.start_pos.x < min.x) 	min.x = spatial_segment.start_pos.x;
@@ -188,12 +188,12 @@ class SpatialPatternMapping: public BasePatternMapping {
 		SpatialPatternMapping(
 			SpatialPattern& pattern,   					// Reference to SpatialPattern object
 			SpatialStripSegment* spatial_segments,		// Pointer to Array of SpatialStripSegment to map pattern to
-			byte num_segments,							// Number of SpatialStripSegments (length of spatial_segments)
+			uint8_t num_segments,							// Number of SpatialStripSegments (length of spatial_segments)
 			uint16_t frame_delay,  						// Delay between pattern frames (in ms)
 			const char* name="SpatialPatternMapping", 	// Name to give this pattern configuration
 			uint16_t duration=DEFAULT_DURATION,			
 			Point offset=undefinedPoint,				// Translational offset to apply to Project coordinate system before scaling
-			Point scale_factors=undefinedPoint			// Scaling factors to apply to Project coordinate system to map to Pattern coordinates
+			Point scale_factors=undefinedPoint			// Scaling factors to apply to Project coordinate system to map to Pattern coordinates (fraction of 1024)
 		): BasePatternMapping(frame_delay, duration, name), pattern(pattern), spatial_segments(spatial_segments), num_segments(num_segments), offset(offset), scale_factors(scale_factors)	{
 			// Calculate Project space scale
 			Bounds project_bounds = get_spatial_segment_bounds(spatial_segments, num_segments);
@@ -201,7 +201,8 @@ class SpatialPatternMapping: public BasePatternMapping {
 			
 			// Set automatically if not specified (scale project bounds to fit pattern space)
 			if (this->scale_factors == undefinedPoint) {
-				this->scale_factors = project_bounds.magnitude()/(2*pattern.resolution);
+				this->scale_factors = (project_bounds.magnitude()*1024)/(2*pattern.resolution);
+
 			} 
 			// Default offset to centre of project bounds so it is translated to be centered on origin of pattern space
 			if (this->offset == undefinedPoint) {
@@ -217,11 +218,11 @@ class SpatialPatternMapping: public BasePatternMapping {
 		
 		// Excute new frame of pattern and map results to LED array
 		void newFrame(CRGB* leds)	override {
-			BasePatternMapping::newFrame(leds);			
+			BasePatternMapping::newFrame(leds);
 			this->pattern.frameAction(this->frame_time);
 			
 			// Loop through every LED (axis and axis position combination), determine spatial position and get value
-			for (byte axis_id=0; axis_id < this->num_segments; axis_id++) {
+			for (uint8_t axis_id=0; axis_id < this->num_segments; axis_id++) {
 				SpatialStripSegment& axis = this->spatial_segments[axis_id];
 				// Loop through all positions on axis
 				for (uint16_t axis_pos=0; axis_pos<axis.strip_segment.segment_len; axis_pos++) {
@@ -230,7 +231,7 @@ class SpatialPatternMapping: public BasePatternMapping {
 					// Get LED ID from strip segment
 					uint16_t led_id = axis.strip_segment.getLEDId(axis_pos);
 					// Translate spatial position to pattern coordinates
-					Point pattern_pos = (pos - this->offset).hadamard_divide(this->scale_factors);
+					Point pattern_pos = ((pos - this->offset)*1024).hadamard_divide(this->scale_factors);
 					// Get value from pattern
 					leds[led_id] = this->pattern.getLEDValue(pattern_pos);
 				}
@@ -250,14 +251,14 @@ class SpatialPatternMapping: public BasePatternMapping {
 	protected:
 		SpatialPattern& pattern;
 		SpatialStripSegment* spatial_segments;
-		byte num_segments;		// Number of configured strip segments to map pattern to
+		uint8_t num_segments;		// Number of configured strip segments to map pattern to
 		Point offset;  			// Offset of Pattern space from Project space (in Project coordinates, before scaling applied)
 		Point scale_factors; 	// Scaling vector for Project space to Pattern space transformation
 		Point project_centroid; // Centre point of project coordinate bounds
 };
 
 // Allows for mapping a linear pattern to a vector in 3D space
-// The middle of the linear pattern path will be at the centre of the bounding box of the spatial strip segments
+// The middle of the linear pattern path will be aligned with the centre of the bounding box of the spatial strip segments, plus an optional offset
 // The length of the linear pattern path will be equal to the distance through the bounding box in the direction of the desired vector, multipled by scale factor
 class LinearToSpatialPatternMapping : public BasePatternMapping {
 	public:
@@ -266,19 +267,28 @@ class LinearToSpatialPatternMapping : public BasePatternMapping {
 			LinearPattern& pattern,   		// LinearPattern object
 			Point pattern_vector,						// Vector to map pattern to
 			SpatialStripSegment* spatial_segments,		// Pointer to Array of SpatialStripSegment to map pattern to
-			byte num_segments,							// Number of SpatialStripSegments (length of spatial_segments)
+			uint8_t num_segments,							// Number of SpatialStripSegments (length of spatial_segments)
 			uint16_t frame_delay,  						// Delay between pattern frames (in ms)
 			const char* name="LinearToSpatialPatternMapping", 	// Name to give this pattern configuration
 			uint16_t duration=DEFAULT_DURATION,			
-			float scale=1.0					// Scaling factor to apply to linear pattern vector length
-		): BasePatternMapping(frame_delay, duration, name), 
-		pattern(pattern), pattern_vector(pattern_vector), spatial_segments(spatial_segments), num_segments(num_segments)  {			
+			uint16_t offset=0,			// Offset of pattern vector start position
+			uint8_t scale=128,					// Scaling factor to apply to linear pattern vector length (fraction of 256 where 128 = 1),
+			bool mirrored=false				// Whether linear pattern is mirrored around start position on vector
+		): BasePatternMapping(frame_delay, duration, name), 	
+		pattern(pattern), pattern_vector(pattern_vector), spatial_segments(spatial_segments), num_segments(num_segments), mirrored(mirrored)  {			
+			// Scale pattern vector to length of 256 (for efficient calculations)
+			this->vector_len = this->pattern_vector.norm();
+			//this->pattern_vector = (pattern_vector*256)/pattern_vector.norm();
 			Bounds bounds = get_spatial_segment_bounds(spatial_segments, num_segments);
 			Point bounds_size = bounds.magnitude();
-			// Get length of linear pattern path (scale factor * length of pattern_vector through spatial bounding box) 
-			this->path_length = scale * (abs(pattern_vector.x*bounds_size.x) + abs(pattern_vector.y*bounds_size.y) + abs(pattern_vector.z*bounds_size.z))/pattern_vector.norm();
-			// Get start position of pattern path (centre of bounds - path_length/2 in direction of pattern_vector)
-			this->path_start_pos = bounds.centre() - pattern_vector * (this->path_length/(2*pattern_vector.norm()));
+			// Get full length of linear pattern vector within spatial bounding box
+			uint16_t full_path_len = (abs(this->pattern_vector.x*bounds_size.x) + abs(this->pattern_vector.y*bounds_size.y) + abs(this->pattern_vector.z*bounds_size.z))/this->vector_len;
+			
+			// Get start position of pattern path (centre of bounds - (full_path_len/2 - offset)in direction of pattern_vector)
+			this->path_start_pos = bounds.centre() - (this->pattern_vector * (full_path_len/2 - offset + 1)/this->vector_len);
+			// Apply scale to full vector length to get desired path length
+			this->path_length = (scale * full_path_len)/128;
+			this->path_end_pos = this->path_start_pos + (this->pattern_vector * this->path_length)/this->vector_len;
 		}
 		
 		
@@ -300,10 +310,16 @@ class LinearToSpatialPatternMapping : public BasePatternMapping {
 		
 		// Excute new frame of pattern and map results to LED array
 		void newFrame(CRGB* leds)	override {
-			//DPRINT("path length: ");
-			//DPRINTLN(this->path_length);
-			//DPRINT("path end pos: ");
-			//DPRINTLN(this->path_start_pos.x);
+			/*
+			DPRINT("Start Pos");
+			DPRINTLN(this->path_start_pos);
+			DPRINT("End Pos");
+			DPRINTLN(this->path_end_pos);
+			DPRINT("Length");
+			DPRINTLN(this->path_length);
+			DPRINT("Vector");
+			DPRINTLN(this->pattern_vector);
+			*/
 			BasePatternMapping::newFrame(leds);			
 			this->pattern.frameAction(this->frame_time);
 			// Loop through every LED (axis and axis position combination), determine spatial position and appropriate state from pattern
@@ -314,9 +330,28 @@ class LinearToSpatialPatternMapping : public BasePatternMapping {
 					// Get global LED ID from strip segment
 					uint16_t led_id = axis.strip_segment.getLEDId(axis_pos);
 					// Get spatial position of LED
-					Point pos = axis.getSpatialPosition(axis_pos);
+					Point led_pos = axis.getSpatialPosition(axis_pos);
+					// If mirroring is not enabled, check if LED pos is in pattern_vector direction from start_pos
+					if (!this->mirrored) {
+						//Point rel_pos = led_pos - this->path_start_pos;
+						// Get projected LED position on pattern path
+						Point pos_on_path = led_pos.hadamard_product(this->pattern_vector)/this->vector_len;
+
+						//DPRINT("LED Pos");
+						//DPRINTLN(led_pos);
+						//DPRINT("Path Pos");
+						//DPRINTLN(pos_on_path);
+
+						//((rel_pos.x*this->pattern_vector.x < 0) || (rel_pos.y*this->pattern_vector.y < 0) || (rel_pos.z*this->pattern_vector.z < 0))
+						if (!between(pos_on_path.x, this->path_start_pos.x, this->path_end_pos.x) || 
+							!between(pos_on_path.y, this->path_start_pos.y, this->path_end_pos.y) || 
+							!between(pos_on_path.y, this->path_start_pos.z, this->path_end_pos.z)) {
+							leds[led_id] = CRGB::Black;
+							continue;
+						}
+					}
 					// Get distance of LED from plane through pattern path start position
-					float dist_from_start = pos.distance_to_plane(this->pattern_vector, this->path_start_pos);
+					uint16_t dist_from_start = led_pos.distance_to_plane(this->pattern_vector, this->path_start_pos);
 					// Get pattern value at same proportional position along pattern axis
 					// For now just round to nearest, could do interpolation between two
 					uint16_t pattern_axis_pos = round((dist_from_start*(this->pattern.resolution-1))/this->path_length);
@@ -327,11 +362,13 @@ class LinearToSpatialPatternMapping : public BasePatternMapping {
 		
 	protected:
 		LinearPattern& pattern;
-		Point pattern_vector;       // Vector of direction to apply linear pattern
+		Point pattern_vector;   // Vector of direction to apply linear pattern
+		float vector_len;		// Precomputed length of pattern vector
 		SpatialStripSegment* spatial_segments;
-		byte num_segments;						// Number of configured strip segments to map pattern to
-		float path_length;				// Length of path that linear pattern will travel through
-		Point path_start_pos;
+		uint8_t num_segments;						// Number of configured strip segments to map pattern to
+		uint16_t path_length;				// Length of path that linear pattern will travel through
+		Point path_start_pos, path_end_pos;
+		bool mirrored;
 };
 
 // Allows for multiple pattern mappings to be applied at the same time
@@ -341,7 +378,7 @@ class MultiplePatternMapping : public BasePatternMapping {
 		// Constructor
 		MultiplePatternMapping(
 			BasePatternMapping** mappings,	// Pointer to Array of pointers to other PatternMappings to apply
-			byte num_mappings,				// Number of Pattern Mappings (length of mappings)
+			uint8_t num_mappings,				// Number of Pattern Mappings (length of mappings)
 			uint16_t frame_delay,  			// Delay between pattern frames (in ms)
 			const char* name="MultiplePatternMapping", 			// Name to give this pattern configuration
 			uint16_t duration=DEFAULT_DURATION
@@ -350,7 +387,7 @@ class MultiplePatternMapping : public BasePatternMapping {
 		// Initialise/Reset pattern state
 		virtual void reset() override {	
 			BasePatternMapping::reset();
-			for (byte i=0; i < this->num_mappings; i++) {
+			for (uint8_t i=0; i < this->num_mappings; i++) {
 				this->mappings[i]->reset();
 			}
 		};
@@ -358,26 +395,26 @@ class MultiplePatternMapping : public BasePatternMapping {
 		// Excute new frame of all pattern mappings
 		void newFrame(CRGB* leds)	override {
 			BasePatternMapping::newFrame(leds);
-			for (byte i=0; i < this->num_mappings; i++) {				
+			for (uint8_t i=0; i < this->num_mappings; i++) {				
 				this->mappings[i]->newFrame(leds);
 			}
 		}
 		
 		// Set palette of underlying pattern(s)
 		virtual void setPalette(CRGBPalette16 new_palette)	{
-			for (byte i=0; i < this->num_mappings; i++) {
+			for (uint8_t i=0; i < this->num_mappings; i++) {
 				this->mappings[i]->setPalette(new_palette);
 			}
 		};
 		
 		// Reset palette of underlying pattern(s) to one it was initialised with
 		virtual void resetPalette()	{
-			for (byte i=0; i < this->num_mappings; i++) {
+			for (uint8_t i=0; i < this->num_mappings; i++) {
 				this->mappings[i]->resetPalette();
 			}
 		};
 	protected:
 		BasePatternMapping** mappings;
-		byte num_mappings;
+		uint8_t num_mappings;
 };
 #endif

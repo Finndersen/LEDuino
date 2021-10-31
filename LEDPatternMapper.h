@@ -87,6 +87,9 @@ class PatternController {
 				// Choose next pattern
 				new_pattern_id = (this->current_mapping_id + 1)%(this->num_patterns);
 			}
+			// Reset LED state
+			FastLED.clear();  // clear all pixel data
+			FastLED.show();
 			setPatternMapping(new_pattern_id);
 		}
 };

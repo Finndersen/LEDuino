@@ -10,14 +10,14 @@
 // Structure to represent a cartesian coordinate or vector 
 class Point: public Printable {
 	public:
-		float x=0.0, y=0.0, z=0.0;
+		int16_t x=0, y=0, z=0;
 		
 		//Initialise explicitly
-		Point(float x, float y, float z): x(x), y(y), z(z)	{};
+		Point(int16_t x, int16_t y, int16_t z): x(x), y(y), z(z)	{};
 		// 2D (z default to 0)
-		Point(float x, float y): x(x), y(y), z(0)	{};
+		Point(int16_t x, int16_t y): x(x), y(y), z(0)	{};
 		// Initialise from array
-		Point(float* arr): x(arr[0]), y(arr[1]), z(arr[2])	{};
+		Point(int16_t* arr): x(arr[0]), y(arr[1]), z(arr[2])	{};
 		// Default constructor
 		Point(): x(0), y(0), z(0) {};
 		
@@ -29,11 +29,11 @@ class Point: public Printable {
 		Point operator-(const Point &RHS) const { return Point(*this) -= RHS; };
 		
 		// Scalar addition and subtraction
-		Point& operator+=(const float &RHS) { x += RHS; y += RHS; z += RHS; return *this; };
-		Point& operator-=(const float &RHS) { x -= RHS; y -= RHS; z -= RHS; return *this; };
+		Point& operator+=(const int16_t &RHS) { x += RHS; y += RHS; z += RHS; return *this; };
+		Point& operator-=(const int16_t &RHS) { x -= RHS; y -= RHS; z -= RHS; return *this; };
 
-		Point operator+(const float &RHS) const { return Point(*this) += RHS; };
-		Point operator-(const float &RHS) const { return Point(*this) -= RHS; };
+		Point operator+(const int16_t &RHS) const { return Point(*this) += RHS; };
+		Point operator-(const int16_t &RHS) const { return Point(*this) -= RHS; };
 		
 		// Scalar product and division
 		Point& operator*=(const float &RHS) { x *= RHS; y *= RHS; z *= RHS; return *this; };
@@ -57,9 +57,9 @@ class Point: public Printable {
 		// Calculate distance of this point from plane defined by a normal vector and point
 		float distance_to_plane(Point& norm_vector, Point& plane_point)	const {
 			// Calculate coefficent D of plane equation
-			float D = -(norm_vector.x*plane_point.x + norm_vector.y*plane_point.y + norm_vector.z*plane_point.z);
+			int16_t D = -(norm_vector.x*plane_point.x + norm_vector.y*plane_point.y + norm_vector.z*plane_point.z);
 			// Get numerator of distance equation
-			float num = abs(norm_vector.x*x + norm_vector.y*y + norm_vector.z*z + D);
+			int16_t num = abs(norm_vector.x*x + norm_vector.y*y + norm_vector.z*z + D);
 			return num / norm_vector.norm();
 			
 		}
@@ -96,7 +96,7 @@ Point v_x(1, 0, 0);
 Point v_y(0, 1, 0);
 Point v_z(0, 0, 1);
 
-Point undefinedPoint(FLT_MIN, FLT_MIN, FLT_MIN);
+Point undefinedPoint(-32768, -32768, -32768);
 
 // Class to define bounding box (rectangular prism) defined by minimum (bottom left) and maximum (top right) points
 class Bounds {
