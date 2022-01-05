@@ -16,8 +16,10 @@ class Point: public Printable {
 		Point(int16_t x, int16_t y, int16_t z): x(x), y(y), z(z)	{};
 		// 2D (z default to 0)
 		Point(int16_t x, int16_t y): x(x), y(y), z(0)	{};
+		// Initialise for Int (helps with operator overloading)
+		//Point(int16_t a): x(a), y(a), z(a)	{};
 		// Initialise from array
-		Point(int16_t* arr): x(arr[0]), y(arr[1]), z(arr[2])	{};
+		//Point(int16_t* arr): x(arr[0]), y(arr[1]), z(arr[2])	{};
 		// Default constructor
 		Point(): x(0), y(0), z(0) {};
 		
@@ -36,15 +38,45 @@ class Point: public Printable {
 		Point operator-(const int16_t &RHS) const { return Point(*this) -= RHS; };
 		
 		// Scalar product and division
-		Point& operator*=(const float &RHS) { x *= RHS; y *= RHS; z *= RHS; return *this; };
-		Point& operator/=(const float &RHS) { x /= RHS; y /= RHS; z /= RHS; return *this; };
-
-		Point operator*(const float &RHS) { return Point(*this) *= RHS; };
-		Point operator/(const float &RHS) { return Point(*this) /= RHS; };
+		template<typename T>
+		Point& operator*=(const T RHS) {	
+			this->x *= RHS; 
+			this->y *= RHS; 
+			this->z *= RHS; 
+			return *this; 
+		};
+		template<typename T>
+		Point& operator/=(const T RHS) { 
+			DPRINT("Diving by: ");
+			DPRINTLN(RHS);
+			this->x /= RHS; 
+			this->y /= RHS; 
+			this->z /= RHS; 
+			return *this; 
+		};
+		
+		template<typename T>
+		Point operator*(const T RHS) { return Point(*this) *= RHS; };
+		template<typename T>
+		Point operator/(const T RHS) { return Point(*this) /= RHS; };
 		
 		// Element-wise multiplication and division
 		Point hadamard_product(const Point &RHS) {return Point(this->x*RHS.x, this->y*RHS.y, this->z*RHS.z); };
 		Point hadamard_divide(const Point &RHS) {return Point(this->x/RHS.x, this->y/RHS.y, this->z/RHS.z); };
+		
+		// Scale coordinate by fraction of 256 (Where 256 = 1). Can provide scalar or vector scale factors
+		Point scale(const Point scale_factors) {
+			return Point(
+				(this->x*scale_factors.x)/256, 
+				(this->y*scale_factors.y)/256, 
+				(this->z*scale_factors.z)/256);
+		};		
+		Point scale(const uint16_t scale_factor) {
+			return Point(
+				(this->x*scale_factor)/256, 
+				(this->y*scale_factor)/256, 
+				(this->z*scale_factor)/256);
+		};
 		
 		// Negation
 		Point operator-() const {return Point(-x, -y, -z); };
@@ -57,9 +89,9 @@ class Point: public Printable {
 		// Calculate distance of this point from plane defined by a normal vector and point
 		float distance_to_plane(Point& norm_vector, Point& plane_point)	const {
 			// Calculate coefficent D of plane equation
-			int16_t D = -(norm_vector.x*plane_point.x + norm_vector.y*plane_point.y + norm_vector.z*plane_point.z);
+			int32_t D = norm_vector.x*plane_point.x + norm_vector.y*plane_point.y + norm_vector.z*plane_point.z;
 			// Get numerator of distance equation
-			int16_t num = abs(norm_vector.x*x + norm_vector.y*y + norm_vector.z*z + D);
+			uint16_t num = abs(norm_vector.x*x + norm_vector.y*y + norm_vector.z*z - D);
 			return num / norm_vector.norm();
 			
 		}
@@ -84,8 +116,11 @@ class Point: public Printable {
 // Implement binary operators as free (non-member) functions to enable symmetry
 inline bool operator==(const Point& lhs, const Point& rhs){ return lhs.x==rhs.x && lhs.y==rhs.y && lhs.z==rhs.z; }
 inline bool operator!=(const Point& lhs, const Point& rhs){return !operator==(lhs,rhs);}
-inline Point operator/(const float &lhs, const Point &rhs) { return Point(lhs/rhs.x, lhs/rhs.y, lhs/rhs.z); }
-inline Point operator*(const float &lhs, Point &rhs) { return rhs*lhs; }
+
+template<typename T>
+inline Point operator/(const T lhs, const Point &rhs) { return Point(lhs/rhs.x, lhs/rhs.y, lhs/rhs.z); }
+template<typename T>
+inline Point operator*(const T lhs, const Point &rhs) { return rhs*lhs; }
 //inline bool operator< (const Point& lhs, const Point& rhs){ /* do actual comparison */ }
 //inline bool operator> (const Point& lhs, const Point& rhs){return  operator< (rhs,lhs);}
 //inline bool operator<=(const Point& lhs, const Point& rhs){return !operator> (lhs,rhs);}
@@ -120,6 +155,7 @@ class Bounds {
 					(point.z <= this->max.z) && (point.z >= this->min.z)
 			);
 		}
+		
 		Point min, max;
 };
 

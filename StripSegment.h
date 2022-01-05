@@ -58,17 +58,39 @@ class StripSegment {
 
 // Class to define spatial positioning of a strip segment for use with a SpatialPatternMapping
 // Generally want to define axis positions such that the coordinate origin is at the physical centre of your project
+//template<uint16_t t_segment_length>
 class SpatialStripSegment {
 	public:
 		SpatialStripSegment(
 			const StripSegment strip_segment, 	// LED Strip segment for axis	
 			Point start_pos, 					// Start position of axis in 3D  (Position of first LED)
 			Point end_pos						// End position of axis in 3D space (Position of last LED)
-			): strip_segment(strip_segment), start_pos(start_pos), end_pos(end_pos), step((end_pos-start_pos)/(strip_segment.segment_len-1))   {}
+			): strip_segment(strip_segment), start_pos(start_pos), end_pos(end_pos)   {
+				// Dynamically allocate array to store LED positions
+				this->led_positions = new Point[strip_segment.segment_len];
+				// Calculate coordinate positions of each LED in strip segment
+				
+				uint16_t scale_factor = 256/(strip_segment.segment_len-1);
+				for (uint16_t i=0; i < strip_segment.segment_len; i++) {
+					led_positions[i] = start_pos + (end_pos-start_pos).scale(i*scale_factor);
+				}
+				
+				//this->step = (end_pos-start_pos)/(strip_segment.segment_len-1);
+			}
 		
 		// Get spatial position of an LED on the axis 
-		Point getSpatialPosition(unsigned int axis_pos)	{
-			return this->start_pos + this->step*axis_pos;
+		Point getSpatialPosition(uint16_t axis_pos)	{
+			/*
+			DPRINT("Spatial axis start pos");
+			DPRINTLN(this->start_pos);
+			DPRINT("Spatial axis end pos");
+			DPRINTLN(this->end_pos);
+			DPRINT("Spatial axis step");
+			DPRINTLN(this->step);
+			*/
+			//return this->start_pos + this->step*axis_pos;
+			
+			return this->led_positions[axis_pos];
 		}
 		
 		// Negation operator overloading to get reverse version of axis
@@ -77,11 +99,19 @@ class SpatialStripSegment {
 			// Reverse start and end position
 			return SpatialStripSegment(-(this->strip_segment), this->end_pos, this->start_pos);
 		}
+		/*
+		~SpatialStripSegment() {
+			delete [] this->led_positions;
+		}
+		*/
 		
 		StripSegment strip_segment;		// LED Strip segment for axis
-
 		Point start_pos;	// Start position of axis in 3D space
 		Point end_pos;		// End position of axis in 3D space
+		
+	protected:
+
+		Point *led_positions; 	// Pre-calculated array of coordinate positions of each LED in strip segment
 		Point step;			// Direction vector of axis with length equal to distance between LEDS on axis
 };
 

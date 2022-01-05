@@ -68,9 +68,7 @@ class LinearStatePattern : public LinearPattern	{
 		// Constructor
 		LinearStatePattern(	
 			CRGBPalette16 colour_palette=White_p		// Colour palette to use for pattern (default to white)
-		): LinearPattern(t_resolution, colour_palette) {
-				
-			}
+		): LinearPattern(t_resolution, colour_palette) {}
 		
 		virtual void reset()	override {
 			LinearPattern::reset();
