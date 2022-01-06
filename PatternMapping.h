@@ -90,7 +90,8 @@ class LinearPatternMapping: public BasePatternMapping {
 				uint16_t s = strip_segment.segment_len;
 				// Perform downsampling of pattern data to strip segment. 
 				// Basically trying to scale pattern of length p onto LED segment of length s
-				// To represent weights using integers, each pattern pixel will be weighted out of segment length s
+				// The value of each actual LED will be derived from a weighted average of values from a range of virtual pattern LEDs
+				// To represent weights using integers, each pattern pixel will be weighted as a fraction of segment length s (for convenience)
 				// A value of 's' corresponds to weighting of 1 and means the entire pattern pixel contributes to the value of the strip segment LED
 				// The total weight of all pattern pixels for a strip segment LED is equal to p (pattern length)
 				for (uint16_t led_ind=0; led_ind<s; led_ind++) 	{
@@ -201,7 +202,7 @@ class SpatialPatternMapping: public BasePatternMapping {
 			
 			// Set automatically if not specified (scale project bounds to fit pattern space)
 			if (this->scale_factors == undefinedPoint) {
-				this->scale_factors = project_bounds.magnitude() * float (256.0/(2*pattern.resolution));
+				this->scale_factors = project_bounds.magnitude() * (256.0/(2*pattern.resolution));
 
 			}
 			// Default offset to centre of project bounds so it is translated to be centered on origin of pattern space
@@ -225,14 +226,15 @@ class SpatialPatternMapping: public BasePatternMapping {
 			// Loop through every LED (axis and axis position combination), determine spatial position and get value
 			for (uint8_t axis_id=0; axis_id < this->num_segments; axis_id++) {
 				SpatialStripSegment& axis = this->spatial_segments[axis_id];
+				DPRINT("Axis Vector");
+				DPRINTLN(axis.end_pos - axis.start_pos);
 				// Loop through all positions on axis
 				for (uint16_t axis_pos=0; axis_pos<axis.strip_segment.segment_len; axis_pos++) {
 					// Get position from spatial axis
 					Point pos = axis.getSpatialPosition(axis_pos);
 					//DPRINT("Step");
 					//DPRINTLN(axis.step);
-					DPRINT("Axis Vector");
-					DPRINTLN(axis.end_pos - axis.start_pos);
+
 					DPRINT("LED Pos");
 					DPRINTLN(pos);
 					// Get LED ID from strip segment
@@ -320,7 +322,7 @@ class LinearToSpatialPatternMapping : public BasePatternMapping {
 		
 		// Excute new frame of pattern and map results to LED array
 		void newFrame(CRGB* leds)	override {
-			
+			/*
 			DPRINT("Start Pos");
 			DPRINTLN(this->path_start_pos);
 			DPRINT("End Pos");
@@ -329,6 +331,7 @@ class LinearToSpatialPatternMapping : public BasePatternMapping {
 			DPRINTLN(this->path_length);
 			DPRINT("Vector");
 			DPRINTLN(this->pattern_vector);
+			*/
 			
 			BasePatternMapping::newFrame(leds);			
 			this->pattern.frameAction(this->frame_time);
@@ -341,14 +344,16 @@ class LinearToSpatialPatternMapping : public BasePatternMapping {
 					uint16_t led_id = spatial_axis.strip_segment.getLEDId(axis_pos);
 					// Get spatial position of LED
 					Point led_pos = spatial_axis.getSpatialPosition(axis_pos);
+					//DPRINT("LED Pos");
+					//DPRINTLN(led_pos);
 					// If mirroring is not enabled, check if LED pos is in pattern_vector direction from start_pos
 					if (!this->mirrored) {
 						//Point rel_pos = led_pos - this->path_start_pos;
 						// Get projected LED position on pattern path
 						Point pos_on_path = led_pos.hadamard_product(this->pattern_vector).scale(this->inverse_vector_len_scale);
+						
+						
 						/*
-						DPRINT("LED Pos");
-						DPRINTLN(led_pos);
 						DPRINT("Path Pos");
 						DPRINTLN(pos_on_path);
 						*/
@@ -359,7 +364,7 @@ class LinearToSpatialPatternMapping : public BasePatternMapping {
 							!between(pos_on_path.y, this->path_start_pos.y, this->path_end_pos.y) || 
 							!between(pos_on_path.y, this->path_start_pos.z, this->path_end_pos.z)) {
 							leds[led_id] = CRGB::Black;
-							DPRINTLN("Point is outside pattern path range");
+							//DPRINTLN("Point is outside pattern path range");
 							continue;
 						}
 					}

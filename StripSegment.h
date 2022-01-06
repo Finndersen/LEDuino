@@ -70,9 +70,9 @@ class SpatialStripSegment {
 				this->led_positions = new Point[strip_segment.segment_len];
 				// Calculate coordinate positions of each LED in strip segment
 				
-				uint16_t scale_factor = 256/(strip_segment.segment_len-1);
+				//float scale_factor = 256.0/(strip_segment.segment_len-1);
 				for (uint16_t i=0; i < strip_segment.segment_len; i++) {
-					led_positions[i] = start_pos + (end_pos-start_pos).scale(i*scale_factor);
+					led_positions[i] = start_pos + (end_pos-start_pos)*(((float) i)/(strip_segment.segment_len-1));//.scale(round(i*scale_factor));
 				}
 				
 				//this->step = (end_pos-start_pos)/(strip_segment.segment_len-1);
@@ -99,11 +99,12 @@ class SpatialStripSegment {
 			// Reverse start and end position
 			return SpatialStripSegment(-(this->strip_segment), this->end_pos, this->start_pos);
 		}
-		/*
+		
 		~SpatialStripSegment() {
-			delete [] this->led_positions;
+			DPRINT("DECONSTRUCT");
+			//delete [] this->led_positions;
 		}
-		*/
+		
 		
 		StripSegment strip_segment;		// LED Strip segment for axis
 		Point start_pos;	// Start position of axis in 3D space
