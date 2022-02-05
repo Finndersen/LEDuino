@@ -63,11 +63,11 @@ class SpatialStripSegment {
 	public:
 		SpatialStripSegment(
 			const StripSegment strip_segment, 	// LED Strip segment for axis	
-			Point start_pos, 					// Start position of axis in 3D  (Position of first LED)
-			Point end_pos						// End position of axis in 3D space (Position of last LED)
+			Point<int16_t> start_pos, 					// Start position of axis in 3D  (Position of first LED)
+			Point<int16_t> end_pos						// End position of axis in 3D space (Position of last LED)
 			): strip_segment(strip_segment), start_pos(start_pos), end_pos(end_pos)   {
 				// Dynamically allocate array to store LED positions
-				this->led_positions = new Point[strip_segment.segment_len];
+				this->led_positions = new Point<int16_t>[strip_segment.segment_len];
 				// Calculate coordinate positions of each LED in strip segment
 				
 				//float scale_factor = 256.0/(strip_segment.segment_len-1);
@@ -79,7 +79,7 @@ class SpatialStripSegment {
 			}
 		
 		// Get spatial position of an LED on the axis 
-		Point getSpatialPosition(uint16_t axis_pos)	{
+		Point<int16_t> getSpatialPosition(uint16_t axis_pos)	{
 			/*
 			DPRINT("Spatial axis start pos");
 			DPRINTLN(this->start_pos);
@@ -107,13 +107,13 @@ class SpatialStripSegment {
 		
 		
 		StripSegment strip_segment;		// LED Strip segment for axis
-		Point start_pos;	// Start position of axis in 3D space
-		Point end_pos;		// End position of axis in 3D space
+		Point<int16_t> start_pos;	// Start position of axis in 3D space
+		Point<int16_t> end_pos;		// End position of axis in 3D space
 		
 	protected:
 
-		Point *led_positions; 	// Pre-calculated array of coordinate positions of each LED in strip segment
-		Point step;			// Direction vector of axis with length equal to distance between LEDS on axis
+		Point<int16_t> *led_positions; 	// Pre-calculated array of coordinate positions of each LED in strip segment
+		//Point<int16_t> step;			// Direction vector of axis with length equal to distance between LEDS on axis
 };
 
 #endif

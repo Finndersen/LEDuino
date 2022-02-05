@@ -150,8 +150,8 @@ class LinearPatternMapping: public BasePatternMapping {
 
 // Get the bounding box of a collection of Spatial Segments
 Bounds get_spatial_segment_bounds(SpatialStripSegment* spatial_segments, uint8_t num_segments) {
-	Point min = Point(32767, 32767, 32767);
-	Point max = Point(-32768, -32768, -32768);
+	Point<int16_t> min = Point<int16_t>(32767, 32767, 32767);
+	Point<int16_t> max = Point<int16_t>(-32768, -32768, -32768);
 	
 	for (uint8_t i=0; i<num_segments; i++) {
 		SpatialStripSegment spatial_segment = spatial_segments[i];
@@ -193,8 +193,8 @@ class SpatialPatternMapping: public BasePatternMapping {
 			uint16_t frame_delay,  						// Delay between pattern frames (in ms)
 			const char* name="SpatialPatternMapping", 	// Name to give this pattern configuration
 			uint16_t duration=DEFAULT_DURATION,			
-			Point offset=undefinedPoint,				// Translational offset to apply to Project coordinate system before scaling
-			Point scale_factors=undefinedPoint			// Scaling factors to apply to Project coordinate system to map to Pattern coordinates (where 256 = 1)
+			Point<int16_t> offset=undefinedPoint,				// Translational offset to apply to Project coordinate system before scaling
+			Point<float> scale_factors=undefinedPoint			// Scaling factors to apply to Project coordinate system to map to Pattern coordinates (where 256 = 1)
 		): BasePatternMapping(frame_delay, duration, name), pattern(pattern), spatial_segments(spatial_segments), num_segments(num_segments), offset(offset), scale_factors(scale_factors)	{
 			// Calculate Project space scale
 			Bounds project_bounds = get_spatial_segment_bounds(spatial_segments, num_segments);

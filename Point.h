@@ -8,14 +8,15 @@
 
 
 // Structure to represent a cartesian coordinate or vector 
+template<typename COORD_TYPE>
 class Point: public Printable {
 	public:
-		int16_t x=0, y=0, z=0;
+		COORD_TYPE x=0, y=0, z=0;
 		
 		//Initialise explicitly
-		Point(int16_t x, int16_t y, int16_t z): x(x), y(y), z(z)	{};
+		Point(COORD_TYPE x, COORD_TYPE y, COORD_TYPE z): x(x), y(y), z(z)	{};
 		// 2D (z default to 0)
-		Point(int16_t x, int16_t y): x(x), y(y), z(0)	{};
+		Point(COORD_TYPE x, COORD_TYPE y): x(x), y(y), z(0)	{};
 		// Initialise for Int (helps with operator overloading)
 		//Point(int16_t a): x(a), y(a), z(a)	{};
 		// Initialise from array
@@ -31,11 +32,11 @@ class Point: public Printable {
 		Point operator-(const Point &RHS) const { return Point(*this) -= RHS; };
 		
 		// Scalar addition and subtraction
-		Point& operator+=(const int16_t &RHS) { x += RHS; y += RHS; z += RHS; return *this; };
-		Point& operator-=(const int16_t &RHS) { x -= RHS; y -= RHS; z -= RHS; return *this; };
+		Point& operator+=(const COORD_TYPE &RHS) { x += RHS; y += RHS; z += RHS; return *this; };
+		Point& operator-=(const COORD_TYPE &RHS) { x -= RHS; y -= RHS; z -= RHS; return *this; };
 
-		Point operator+(const int16_t &RHS) const { return Point(*this) += RHS; };
-		Point operator-(const int16_t &RHS) const { return Point(*this) -= RHS; };
+		Point operator+(const COORD_TYPE &RHS) const { return Point(*this) += RHS; };
+		Point operator-(const COORD_TYPE &RHS) const { return Point(*this) -= RHS; };
 		
 		// Scalar product and division
 		template<typename T>
@@ -114,49 +115,52 @@ class Point: public Printable {
 		}
 };
 // Implement binary operators as free (non-member) functions to enable symmetry
-inline bool operator==(const Point& lhs, const Point& rhs){ return lhs.x==rhs.x && lhs.y==rhs.y && lhs.z==rhs.z; }
-inline bool operator!=(const Point& lhs, const Point& rhs){return !operator==(lhs,rhs);}
+template<typename COORD_TYPE>
+inline bool operator==(const Point<COORD_TYPE>& lhs, const Point<COORD_TYPE>& rhs){ return lhs.x==rhs.x && lhs.y==rhs.y && lhs.z==rhs.z; }
+template<typename COORD_TYPE>
+inline bool operator!=(const Point<COORD_TYPE>& lhs, const Point<COORD_TYPE>& rhs){return !operator==(lhs,rhs);}
 
-template<typename T>
-inline Point operator/(const T lhs, const Point &rhs) { return Point(lhs/rhs.x, lhs/rhs.y, lhs/rhs.z); }
-template<typename T>
-inline Point operator*(const T lhs, const Point &rhs) { return rhs*lhs; }
+template<typename COORD_TYPE, typename T>
+inline Point<COORD_TYPE> operator/(const T lhs, const Point<COORD_TYPE> &rhs) { return Point<COORD_TYPE>(lhs/rhs.x, lhs/rhs.y, lhs/rhs.z); }
+template<typename COORD_TYPE, typename T>
+inline Point<COORD_TYPE> operator*(const T lhs, const Point<COORD_TYPE> &rhs) { return rhs*lhs; }
 //inline bool operator< (const Point& lhs, const Point& rhs){ /* do actual comparison */ }
 //inline bool operator> (const Point& lhs, const Point& rhs){return  operator< (rhs,lhs);}
 //inline bool operator<=(const Point& lhs, const Point& rhs){return !operator> (lhs,rhs);}
 //inline bool operator>=(const Point& lhs, const Point& rhs){return !operator< (lhs,rhs);}
 
 // Direction vectors
-Point v_x(1, 0, 0);
-Point v_y(0, 1, 0);
-Point v_z(0, 0, 1);
+Point<int16_t> v_x(1, 0, 0);
+Point<int16_t> v_y(0, 1, 0);
+Point<int16_t> v_z(0, 0, 1);
 
-Point undefinedPoint(-32768, -32768, -32768);
+Point<int16_t> undefinedPoint(-32768, -32768, -32768);
 
 // Class to define bounding box (rectangular prism) defined by minimum (bottom left) and maximum (top right) points
+template<typename COORD_TYPE>
 class Bounds {
 	public: 
-		Bounds(Point min, Point max): min(min), max(max) {}
+		Bounds(Point<COORD_TYPE> min, Point<COORD_TYPE> max): min(min), max(max) {}
 		
 		// Get vector which represents magnitude of bounds in each coordinate (width, length and depth)
-		Point magnitude() {
-			return Point(this->max.x - this->min.x, this->max.y - this->min.y, this->max.z - this->min.z);
+		Point<COORD_TYPE> magnitude() {
+			return Point<COORD_TYPE>(this->max.x - this->min.x, this->max.y - this->min.y, this->max.z - this->min.z);
 		}
 		
 		// Centre point of bounds
-		Point centre() {
-			return Point(this->max.x + this->min.x, this->max.y + this->min.y, this->max.z + this->min.z)/2;
+		Point<COORD_TYPE> centre() {
+			return Point<COORD_TYPE>(this->max.x + this->min.x, this->max.y + this->min.y, this->max.z + this->min.z)/2;
 		}
 		
 		// Whether or not point is contained in bounds
-		bool contains(Point point) {
+		bool contains(Point<COORD_TYPE> point) {
 			return ((point.x <= this->max.x) && (point.x >= this->min.x) &&
 					(point.y <= this->max.y) && (point.y >= this->min.y) &&
 					(point.z <= this->max.z) && (point.z >= this->min.z)
 			);
 		}
 		
-		Point min, max;
+		Point<COORD_TYPE> min, max;
 };
 
 
