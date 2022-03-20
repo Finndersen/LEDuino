@@ -68,28 +68,14 @@ class SpatialStripSegment {
 			): strip_segment(strip_segment), start_pos(start_pos), end_pos(end_pos)   {
 				// Dynamically allocate array to store LED positions
 				this->led_positions = new Point[strip_segment.segment_len];
-				// Calculate coordinate positions of each LED in strip segment
-				
-				//float scale_factor = 256.0/(strip_segment.segment_len-1);
+				// Pre-Calculate coordinate positions of each LED in strip segment
 				for (uint16_t i=0; i < strip_segment.segment_len; i++) {
-					led_positions[i] = start_pos + (end_pos-start_pos)*(((float) i)/(strip_segment.segment_len-1));//.scale(round(i*scale_factor));
+					led_positions[i] = start_pos + (end_pos-start_pos)*(((float) i)/(strip_segment.segment_len-1));
 				}
-				
-				//this->step = (end_pos-start_pos)/(strip_segment.segment_len-1);
 			}
 		
 		// Get spatial position of an LED on the axis 
-		Point getSpatialPosition(uint16_t axis_pos)	{
-			/*
-			DPRINT("Spatial axis start pos");
-			DPRINTLN(this->start_pos);
-			DPRINT("Spatial axis end pos");
-			DPRINTLN(this->end_pos);
-			DPRINT("Spatial axis step");
-			DPRINTLN(this->step);
-			*/
-			//return this->start_pos + this->step*axis_pos;
-			
+		Point getSpatialPosition(uint16_t axis_pos)	{			
 			return this->led_positions[axis_pos];
 		}
 		
@@ -113,7 +99,6 @@ class SpatialStripSegment {
 	protected:
 
 		Point *led_positions; 	// Pre-calculated array of coordinate positions of each LED in strip segment
-		Point step;			// Direction vector of axis with length equal to distance between LEDS on axis
 };
 
 #endif

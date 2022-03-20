@@ -10,32 +10,49 @@
 // Structure to represent a cartesian coordinate or vector 
 class Point: public Printable {
 	public:
-		int16_t x=0, y=0, z=0;
+		float x=0, y=0, z=0;
 		
 		//Initialise explicitly
-		Point(int16_t x, int16_t y, int16_t z): x(x), y(y), z(z)	{};
+		Point(float x, float y, float z): x(x), y(y), z(z)	{};
 		// 2D (z default to 0)
-		Point(int16_t x, int16_t y): x(x), y(y), z(0)	{};
-		// Initialise for Int (helps with operator overloading)
-		//Point(int16_t a): x(a), y(a), z(a)	{};
+		Point(float x, float y): Point(x, y, 0)	{};
 		// Initialise from array
-		//Point(int16_t* arr): x(arr[0]), y(arr[1]), z(arr[2])	{};
+		Point(float* arr): Point(arr[0], arr[1], arr[2])	{};
 		// Default constructor
-		Point(): x(0), y(0), z(0) {};
+		Point(): Point(0, 0, 0) {};
 		
 		// Vector Addition and subtraction
-		Point& operator+=(const Point &RHS) { x += RHS.x; y += RHS.y; z += RHS.z; return *this; };
-		Point& operator-=(const Point &RHS) { x -= RHS.x; y -= RHS.y; z -= RHS.z; return *this; };
+		Point& operator+=(const Point &RHS) { 
+			x += RHS.x; 
+			y += RHS.y; 
+			z += RHS.z; 		
+			return *this; 
+		};
+		Point& operator-=(const Point &RHS) { 
+			x -= RHS.x; 
+			y -= RHS.y; 
+			z -= RHS.z; 
+			return *this; };
 		
-		Point operator+(const Point &RHS) const { return Point(*this) += RHS; };
-		Point operator-(const Point &RHS) const { return Point(*this) -= RHS; };
+		Point operator+(const Point &RHS) const { return Point(x + RHS.x, y + RHS.y, z + RHS.z); };
+		Point operator-(const Point &RHS) const { return Point(x - RHS.x, y - RHS.y, z - RHS.z); };
 		
 		// Scalar addition and subtraction
-		Point& operator+=(const int16_t &RHS) { x += RHS; y += RHS; z += RHS; return *this; };
-		Point& operator-=(const int16_t &RHS) { x -= RHS; y -= RHS; z -= RHS; return *this; };
+		Point& operator+=(const float &RHS) { 
+			x += RHS; 
+			y += RHS; 
+			z += RHS; 
+			return *this; 
+		};
+		Point& operator-=(const float &RHS) { 
+			x -= RHS; 
+			y -= RHS; 
+			z -= RHS; 
+			return *this; 
+		};
 
-		Point operator+(const int16_t &RHS) const { return Point(*this) += RHS; };
-		Point operator-(const int16_t &RHS) const { return Point(*this) -= RHS; };
+		Point operator+(const float &RHS) const { return Point(x+RHS, y+RHS, z+RHS);};
+		Point operator-(const float &RHS) const { return Point(x-RHS, y-RHS, z-RHS);};
 		
 		// Scalar product and division
 		template<typename T>
@@ -47,8 +64,8 @@ class Point: public Printable {
 		};
 		template<typename T>
 		Point& operator/=(const T RHS) { 
-			DPRINT("Diving by: ");
-			DPRINTLN(RHS);
+			//DPRINT("Diving by: ");
+			//DPRINTLN(RHS);
 			this->x /= RHS; 
 			this->y /= RHS; 
 			this->z /= RHS; 
@@ -64,42 +81,34 @@ class Point: public Printable {
 		Point hadamard_product(const Point &RHS) {return Point(this->x*RHS.x, this->y*RHS.y, this->z*RHS.z); };
 		Point hadamard_divide(const Point &RHS) {return Point(this->x/RHS.x, this->y/RHS.y, this->z/RHS.z); };
 		
-		// Scale coordinate by fraction of 256 (Where 256 = 1). Can provide scalar or vector scale factors
-		Point scale(const Point scale_factors) {
-			return Point(
-				(this->x*scale_factors.x)/256, 
-				(this->y*scale_factors.y)/256, 
-				(this->z*scale_factors.z)/256);
-		};		
-		Point scale(const uint16_t scale_factor) {
-			return Point(
-				(this->x*scale_factor)/256, 
-				(this->y*scale_factor)/256, 
-				(this->z*scale_factor)/256);
-		};
-		
 		// Negation
 		Point operator-() const {return Point(-x, -y, -z); };
 		
-		// Euclidean norm
-		float norm() const { 
+		// Euclidean norm 
+		const float norm() const { 
 			return std::sqrt(x*x + y*y + z*z); 
 		};
 		
 		// Calculate distance of this point from plane defined by a normal vector and point
 		float distance_to_plane(Point& norm_vector, Point& plane_point)	const {
 			// Calculate coefficent D of plane equation
-			int32_t D = norm_vector.x*plane_point.x + norm_vector.y*plane_point.y + norm_vector.z*plane_point.z;
+			float D = norm_vector.x*plane_point.x + norm_vector.y*plane_point.y + norm_vector.z*plane_point.z;
 			// Get numerator of distance equation
-			uint16_t num = abs(norm_vector.x*x + norm_vector.y*y + norm_vector.z*z - D);
+			float num = abs(norm_vector.x*x + norm_vector.y*y + norm_vector.z*z - D);
 			return num / norm_vector.norm();
 			
 		}
 
 		// Distance to other point
 		float distance(const Point& other)	const {
-			return std::sqrt(std::pow(other.x-this->x, 2) + std::pow(other.y-this->y, 2) + std::pow(other.z-this->z, 2)); 
+			return std::sqrt(this->distance_squared(other)); 
 		};
+		
+		// Square of Distance to other point (useful for doing distance comparisons and dont want to square root)
+		float distance_squared(const Point& other)	const {
+			return std::pow(other.x-this->x, 2) + std::pow(other.y-this->y, 2) + std::pow(other.z-this->z, 2); 
+		};
+		
 		
 		size_t printTo(Print& p) const {
 			size_t size;
@@ -131,7 +140,7 @@ Point v_x(1, 0, 0);
 Point v_y(0, 1, 0);
 Point v_z(0, 0, 1);
 
-Point undefinedPoint(-32768, -32768, -32768);
+Point undefinedPoint(FLT_MIN, FLT_MIN, FLT_MIN);
 
 // Class to define bounding box (rectangular prism) defined by minimum (bottom left) and maximum (top right) points
 class Bounds {

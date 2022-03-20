@@ -31,29 +31,29 @@ class PatternController {
 		
 		// Run pattern newFrame() if ready, set new pattern if required
 		void loop() {
-			//static unsigned long last_frame_time;
-			//unsigned long current_time;
+			static unsigned long last_frame_time;
+			unsigned long current_time;
 			// Check if pattern config needs to be changed
 			if (this->current_mapping->expired() && this->auto_change_pattern)	{
 				this->setNewPatternMapping();
 			}
 			// New pattern frame
 			if (this->current_mapping->frameReady())	{
-				//current_time = millis();
-				//DPRINT("Frame delay: ");
-				//DPRINTLN(current_time - last_frame_time);
-				//last_frame_time=current_time;
+				current_time = micros();
+				DPRINT("Frame delay: ");
+				DPRINTLN(current_time - last_frame_time);
+				last_frame_time=current_time;
 				// Run pattern frame logic
 				
-				//long pre_frame_time = millis();
+				long pre_frame_time = micros();
 				this->current_mapping->newFrame(this->leds);
-				//long pre_show_time = millis();
+				long pre_show_time = micros();
 				// Show LEDs
 				FastLED.show();
-				//DPRINT("Frame Time: ");
-				//DPRINT(pre_show_time-pre_frame_time);
-				//DPRINT(" Show time: ");
-				//DPRINTLN(millis()-pre_show_time);
+				DPRINT("Frame Time: ");
+				DPRINT(pre_show_time-pre_frame_time);
+				DPRINT(" Show time: ");
+				DPRINTLN(micros()-pre_show_time);
 			}
 		}
 		// Set current active pattern mapper by array index

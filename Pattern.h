@@ -47,7 +47,9 @@ class BasePattern	{
 };
 
 // Base class for patterns defined on a simple linear axis 
-// Converts an segment position into an LED value
+// Converts a segment position into an LED value
+// Overidde frameAction() for updating pattern state with each frame, 
+// and getLEDValue() for getting value of LED at position along segment
 class LinearPattern: public BasePattern	{
 	public:
 		LinearPattern(	
@@ -61,7 +63,10 @@ class LinearPattern: public BasePattern	{
 };
 
 // Base class for linear pattern which uses an array of length t_resolution to store state 
-// Used for more complex patterns that need to use detailed state from previous frame
+// Override frameAction() to implement pattern logic and populate LED values in pattern_state
+// Used for patterns that need to use historical LED state from previous frame, or for pre-computing LED values for efficiency 
+// since getLEDValue(i) is called multiple times for same 'i' if there are multiple segments mapped
+// Tradeoff between memory and CPU usage
 template<uint16_t t_resolution> 
 class LinearStatePattern : public LinearPattern	{
 	public:
@@ -98,7 +103,6 @@ class SpatialPattern : public BasePattern {
 
 		// Get value for LED at point coordinate. (For SpatialPattern). 
 		virtual CRGB getLEDValue(Point point) { return CRGB::Black; }
-		
 
 };
 #endif

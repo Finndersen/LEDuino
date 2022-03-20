@@ -432,39 +432,35 @@ class SparkleFill : public LinearStatePattern<t_resolution>  {
 	void frameAction(uint32_t frame_time)	override {
 		for (uint16_t i=0; i < this->resolution; i++) 	{
 			byte brightness = this->pattern_state[i].getAverageLight();
-			// Check whether pixel is candidate to be filled/unfilled
-			//if (is_filled != this->fill) 	{
-				// Probabilty to fill/un-fill is proportional to amount remaining
-				if (random(0,this->remaining) == 0) {
-					// Fill with random palette value, or unfill
-					if (brightness) 	{
-						// Brighten existing pixel if filling
-						if (this->fill)	{
-							if (brightness < 200)	{
-								this->pattern_state[i]*=2;
-							}
-						} else {
-							// reduce brightness or set to black if un-filling
-							if (brightness > 32)	{
-								this->pattern_state[i]/= 2;
-							} else {
-								this->pattern_state[i] = CRGB::Black;
-								this->remaining--;
-							}
+			// Probabilty to fill/un-fill is proportional to amount remaining
+			if (random(0,this->remaining) == 0) {
+				// Fill with random palette value, or unfill
+				if (brightness) 	{
+					// Brighten existing pixel if filling
+					if (this->fill)	{
+						if (brightness < 200)	{
+							this->pattern_state[i]*=2;
 						}
-					} else if (this->fill) {
-						// Fill with new colour
-						this->pattern_state[i] = this->colorFromPalette(random(0,256), 32);
-						this->remaining--;
+					} else {
+						// reduce brightness or set to black if un-filling
+						if (brightness > 32)	{
+							this->pattern_state[i]/= 2;
+						} else {
+							this->pattern_state[i] = CRGB::Black;
+							this->remaining--;
+						}
 					}
-					
-					if (this->remaining == 0)	{
-						this->remaining = this->resolution;
-						this->fill = !this->fill;
-					}
+				} else if (this->fill) {
+					// Fill with new colour
+					this->pattern_state[i] = this->colorFromPalette(random(0,256), 32);
+					this->remaining--;
 				}
 				
-			//}
+				if (this->remaining == 0)	{
+					this->remaining = this->resolution;
+					this->fill = !this->fill;
+				}
+			}
 		}
 		
 	}
