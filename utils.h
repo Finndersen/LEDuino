@@ -31,7 +31,7 @@ class Interpolator	{
 };
 
 // Subtraction with support for wrapping around back to max_value
-unsigned int wrap_subtract(unsigned int value, unsigned int subtract, unsigned int max_value)	{
+uint16_t wrap_subtract(uint16_t value, uint16_t subtract, uint16_t max_value)	{
 	if (subtract <= value) 	{
 		return value - subtract;
 	} else {

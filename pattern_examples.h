@@ -6,7 +6,7 @@
 template<uint16_t t_resolution> 
 class MovingPulse: public LinearStatePattern<t_resolution>   {
   public:
-    MovingPulse(byte pulse_len=3, byte speed=4, CRGBPalette16 colour_palette = White_p):
+    MovingPulse(uint8_t pulse_len=3, uint8_t speed=4, CRGBPalette16 colour_palette = White_p):
       LinearStatePattern<t_resolution>(colour_palette), 
 	  head_pos(0), pulse_len(pulse_len), speed(speed), tail_interpolator(Interpolator(0, 255, pulse_len + 1, 0))  {}
 
@@ -32,16 +32,16 @@ class MovingPulse: public LinearStatePattern<t_resolution>   {
 			return CRGB::Black;
 		}
 		// Use interpolator to get brightness
-		byte lum = tail_interpolator.get_value(distance_behind_head);
-		byte hue = (i*255) / this->resolution; // Change colour along axis
+		uint8_t lum = tail_interpolator.get_value(distance_behind_head);
+		uint8_t hue = (i*255) / this->resolution; // Change colour along axis
 		return this->colorFromPalette(hue, lum);
 	}
 
   private:
 	
     uint16_t head_pos;    			// Position of head of pulse
-    byte pulse_len;        				// Length of pulse (in actual pixels). Virtual pulse width is pulse_len*interpolation_factor
-	byte speed; 						// NUmber of virtual pixels to move each step
+    uint8_t pulse_len;        				// Length of pulse (in actual pixels). Virtual pulse width is pulse_len*interpolation_factor
+	uint8_t speed; 						// NUmber of virtual pixels to move each step
 	Interpolator tail_interpolator;  	// Linear Interpolator for pulse tail brightness
 	
 };
@@ -87,19 +87,19 @@ class RandomRainbows: public LinearStatePattern<t_resolution>  {
 	 
 	CRGB get_pos_value(uint16_t i)  {
 		
-		byte virtual_pos = (255*(i*this->interpolation_factor + this->pos))/(this->interpolation_factor*this->resolution);
-		byte val = cubicwave8((virtual_pos*this->scale_factor)%255);
+		uint8_t virtual_pos = (255*(i*this->interpolation_factor + this->pos))/(this->interpolation_factor*this->resolution);
+		uint8_t val = cubicwave8((virtual_pos*this->scale_factor)%255);
 		return this->colorFromPalette((val+this->colour_offset)%255, this->dim ? val>>2 : val);
 	}
 	  
 	protected:
-		byte speed;
+		uint8_t speed;
 		bool direction=false;
 		uint8_t pos;    // Position from 0 to interpolation_factor*resolution
-		byte interpolation_factor = 1;
-		byte colour_offset;
+		uint8_t interpolation_factor = 1;
+		uint8_t colour_offset;
 		uint16_t randomize_time;
-		byte scale_factor;
+		uint8_t scale_factor;
 		bool dim;  //Whether to make pattern very dim (can look cool)
 };
 
@@ -288,7 +288,7 @@ void coolLikeIncandescent( CRGB& c, uint8_t phase)
 template<uint16_t t_resolution> 
 class Twinkle : public LinearStatePattern<t_resolution>   {
   public:
-    Twinkle(byte twinkle_speed = 6, CRGBPalette16 colour_palette = FairyLight_p, byte twinkle_density = 4, CRGB bg = CRGB::Black):
+    Twinkle(uint8_t twinkle_speed = 6, CRGBPalette16 colour_palette = FairyLight_p, uint8_t twinkle_density = 4, CRGB bg = CRGB::Black):
       LinearStatePattern<t_resolution>(colour_palette), bg(bg), bg_brightness(bg.getAverageLight()), twinkle_speed(twinkle_speed), twinkle_density(twinkle_density)  {}
 
     void frameAction(uint32_t frame_time) override {
@@ -359,14 +359,14 @@ class Twinkle : public LinearStatePattern<t_resolution>   {
 
     // Background colour
 	CRGB bg;
-    byte bg_brightness;
+    uint8_t bg_brightness;
 
-    byte twinkle_speed;     // 0-8
-    byte twinkle_density;   // 0-8
+    uint8_t twinkle_speed;     // 0-8
+    uint8_t twinkle_density;   // 0-8
     uint16_t PRNG16, clock32;
 };
 
-// Extends to end of strip then end follows
+// Extends head to end of strip then retracts tail
 class GrowThenShrink : public LinearPattern  {
 	public:
 		GrowThenShrink(uint16_t resolution, CRGBPalette16 colour_palette = RainbowColors_p):
@@ -431,7 +431,7 @@ class SparkleFill : public LinearStatePattern<t_resolution>  {
 	
 	void frameAction(uint32_t frame_time)	override {
 		for (uint16_t i=0; i < this->resolution; i++) 	{
-			byte brightness = this->pattern_state[i].getAverageLight();
+			uint8_t brightness = this->pattern_state[i].getAverageLight();
 			// Probabilty to fill/un-fill is proportional to amount remaining
 			if (random(0,this->remaining) == 0) {
 				// Fill with random palette value, or unfill
@@ -633,7 +633,7 @@ class DiscoStrobe : public LinearStatePattern<t_resolution>  {
 			hue += huedelta;
 		  }
 		}
-		byte bpm=61;
+		uint8_t bpm=61;
 };
 
 //https://github.com/FastLED/FastLED/blob/master/examples/Fire2012WithPalette/Fire2012WithPalette.ino

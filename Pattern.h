@@ -38,7 +38,7 @@ class BasePattern	{
 	protected:
 	
 		// Select colour from current palette
-		CRGB colorFromPalette(byte hue, byte bright=255, TBlendType blendType=LINEARBLEND) {
+		CRGB colorFromPalette(uint8_t hue, uint8_t bright=255, TBlendType blendType=LINEARBLEND) {
 			return ColorFromPalette(this->colour_palette, hue, bright, blendType);
 		}
 		
@@ -63,7 +63,6 @@ class LinearPattern: public BasePattern	{
 };
 
 // Base class for linear pattern which uses an array of length t_resolution to store state 
-// Override frameAction() to implement pattern logic and populate LED values in pattern_state
 // Used for patterns that need to use historical LED state from previous frame, or for pre-computing LED values for efficiency 
 // since getLEDValue(i) is called multiple times for same 'i' if there are multiple segments mapped
 // Tradeoff between memory and CPU usage
@@ -78,10 +77,12 @@ class LinearStatePattern : public LinearPattern	{
 		virtual void reset()	override {
 			LinearPattern::reset();
 			// Reset pattern state array to black
-			for (byte i=0; i<resolution; i++) {
+			for (uint8_t i=0; i<resolution; i++) {
 				this->pattern_state[i] = CRGB::Black;
 			}	
 		}
+
+		// Override frameAction() to implement pattern logic and populate LED values in pattern_state
 		
 		virtual CRGB getLEDValue(uint16_t i) override {
 			//Read value from pattern_state
