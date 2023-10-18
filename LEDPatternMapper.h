@@ -18,11 +18,11 @@ class PatternController {
 			CRGB* leds,											// Pointer to Array of CRGB LEDs which is registered with FastLED
 			uint16_t num_leds,									// Number of LEDS (length of leds)
 			BasePatternMapping** pattern_mappings,				// Pointer to Array of pointers to PatternMapping configurations to run
-			byte num_patterns,									// Number of pattern configurations (length of pattern_mappings)
-			bool randomize=true									// Whether to randomize pattern order
-			):  leds(leds), num_leds(num_leds), pattern_mappings(pattern_mappings), num_patterns(num_patterns), randomize(randomize) {
+			byte num_mappings,									// Number of pattern configurations (length of pattern_mappings)
+			bool randomize=false									// Whether to randomize pattern order
+			):  leds(leds), num_leds(num_leds), pattern_mappings(pattern_mappings), num_mappings(num_mappings), randomize(randomize) {
 			// Initialise as max for immediate overflow to 0 at start
-			this->current_mapping_id = num_patterns-1;
+			this->current_mapping_id = num_mappings-1;
 		}
 		void initialise() {
 			// Set initial pattern
@@ -73,7 +73,7 @@ class PatternController {
 		CRGB* leds;	
 		uint16_t num_leds;
 		BasePatternMapping** pattern_mappings;
-		byte num_patterns;
+		byte num_mappings;
 		bool randomize;		
 		long last_frame_time;
 		
@@ -82,10 +82,10 @@ class PatternController {
 			byte new_pattern_id;
 			if (this->randomize)	{
 				// Choose random pattern
-				new_pattern_id = random(0, this->num_patterns);
+				new_pattern_id = random(0, this->num_mappings);
 			} else {
 				// Choose next pattern
-				new_pattern_id = (this->current_mapping_id + 1)%(this->num_patterns);
+				new_pattern_id = (this->current_mapping_id + 1)%(this->num_mappings);
 			}
 			// Reset LED state
 			FastLED.clear();  // clear all pixel data
