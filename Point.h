@@ -168,5 +168,21 @@ class Bounds {
 		Point min, max;
 };
 
+// Get Bounds of an array of points
+Bounds get_bounds_of_points(Point* points, uint16_t num_points) {
+	Point max(FLT_MIN, FLT_MIN, FLT_MIN);
+	Point min(FLT_MAX, FLT_MAX, FLT_MAX);
+	for (uint16_t i=0; i < num_points; i++) {
+		Point& point = points[i];
+		if (point.x > max.x) max.x = point.x;
+		if (point.y > max.y) max.y = point.y;
+		if (point.z > max.z) max.z = point.z;
+
+		if (point.x < min.x) min.x = point.x;
+		if (point.y < min.y) min.y = point.y;
+		if (point.z < min.z) min.z = point.z;
+	}
+	return Bounds(min, max);
+};
 
 #endif
