@@ -7,19 +7,19 @@
 #include "Point.h"
 #define DEFAULT_DURATION 10
 
-// Base class for defining a mapping of a pattern to some kind of spatial configuration of LEDS
-// E.g. a linear strip (single axis) or 3D spatial array of LEDs composed of multiple axes
+// Base class for defining a mapping of a pattern to some kind of configuration of LEDS
+// E.g. a linear segment (single axis) or 2D/3D spatial array of LEDs composed of multiple axes
 class BasePatternMapping {
 	public:
 		// Constructor
 		BasePatternMapping(
 			uint16_t frame_delay,  // Delay between pattern frames (in ms)
 			uint16_t duration=DEFAULT_DURATION,
-			const char* name="BasePatternMapping"): name(name), duration(duration), frame_delay(frame_delay)  {}
+			const char* name="BasePatternMapping"): name(name), duration(duration*1000), frame_delay(frame_delay)  {}
 
 		// Excute new frame of pattern and map results to LED array
 		virtual void newFrame(CRGB* leds) {
-			this->frame_time = millis()-this->start_time;
+			this->frame_time = millis() - this->start_time;
 			// Sub-classes will need to override this method and implement further logic
 		}
 		
@@ -33,10 +33,10 @@ class BasePatternMapping {
 		
 		// Determine whether pattern has expired (exceeded duration)	
 		bool expired()	{
-			return this->frame_time >= (this->duration*1000);
+			return this->frame_time >= this->duration;
 		};
 		
-		// Whether it is time to start a new frame (frame_delay has elapsed since previous frame)
+		// Whether it is time to start a new frame (frame_delay has elapsed since previous frame time)
 		bool frameReady()	{
 			return (millis() - this->start_time - this->frame_time) >= this->frame_delay;
 		};
@@ -49,9 +49,9 @@ class BasePatternMapping {
 		
 		const char* name;  // Name or description of pattern
 	protected:
-		unsigned long frame_time;			// Time since pattern started (in ms)
+		unsigned long frame_time;			// Time of the current frame since pattern started (in ms)
 		unsigned long start_time;			// Absolute time pattern was initialised (in ms)
-		uint16_t duration;  				// Duration of pattern mapping configuration (seconds)
+		uint16_t duration;  				// Duration of pattern mapping configuration (in ms)
 		uint16_t frame_delay;				// Delay between pattern frames (in ms)
 
 };
@@ -78,14 +78,22 @@ class LinearPatternMapping: public BasePatternMapping {
 		};
 		
 		// Excute new frame of pattern and map results to LED array
+		// This implementation involves calling pattern.getLEDValue() multiple times for the same pattern pixel index which is inefficient
+		// Alternatively, it could be called once for every index and the results stored in an array which can be re-used
+		// The two approaches are a trade-off between memory and CPU usage, but generally for linear patterns CPU is not a bottleneck,
+		// and LinearStatePatterns have their own pixel array anyway and can be used if required
 		void newFrame(CRGB* leds)	override {
 			BasePatternMapping::newFrame(leds);			
 			this->pattern.frameAction(this->frame_time);			
 			uint16_t pat_len = this->pattern.resolution;
-			// Loop through all strip segments
+			// Map pattern to all registered strip segments (will be scaled to each segment length)
 			for (uint8_t seg_id=0; seg_id<this->num_segments; seg_id++) {
 				StripSegment& strip_segment = this->strip_segments[seg_id];
 				uint16_t seg_len = strip_segment.segment_len;
+				// For caching previous LED value
+				uint16_t prev_pat_ind = 65535; 
+				CRGB led_val = CRGB(0, 0, 0);
+				CRGB prev_led_val = CRGB(0, 0, 0);
 				// Perform downsampling of pattern data to strip segment. 
 				// Basically trying to scale pattern of length pat_len onto LED segment of length seg_len
 				// The value of each actual LED will be derived from a weighted average of values from a range of virtual pattern pixels
@@ -93,7 +101,7 @@ class LinearPatternMapping: public BasePatternMapping {
 				// Therefore a weight value of 'seg_len' corresponds to weighting of 1 for that pattern pixel
 				// The sum of weights of all pattern pixels for a strip segment LED is equal to pat_len (pattern length)
 				for (uint16_t led_ind=0; led_ind<seg_len; led_ind++) 	{					
-					// Get index of first pattern virtual pixel to downsample
+					// Get index of first pattern virtual pixel to downsample for current LED
 					uint16_t start_index = (led_ind*pat_len)/seg_len;
 					// Weighting to use on first pattern pixel 
 					uint16_t first_weight = seg_len - (led_ind*pat_len - start_index*seg_len);
@@ -102,8 +110,13 @@ class LinearPatternMapping: public BasePatternMapping {
 					uint16_t r = 0, g = 0, b = 0;
 					// Add weighted values to colour components from pattern state
 					uint16_t pat_ind = start_index;
-					do {						
-						CRGB led_val = this->pattern.getLEDValue(pat_ind);
+					do {
+						// If pat_len is not an integer multiple of seg_len, then first pat_ind for an LED will be equal to the last pat_ind of the previous LED
+						if (pat_ind == prev_pat_ind) {
+							led_val = prev_led_val;
+						} else {
+							led_val = this->pattern.getLEDValue(pat_ind);
+						}
 						uint16_t weight;
 						if (pat_ind == start_index) {
 							weight = first_weight;
@@ -115,12 +128,14 @@ class LinearPatternMapping: public BasePatternMapping {
 						r += weight*led_val.red;
 						g += weight*led_val.green;
 						b += weight*led_val.blue;
+						prev_pat_ind = pat_ind;
+						prev_led_val = led_val;
 						pat_ind += 1;
 						remaining_weight -= weight;
 						
 					} while (remaining_weight>0);
 					// Assign downsampled pixel value
-					leds[strip_segment.getLEDId(led_ind)] = CRGB(r/pat_len, g/pat_len, b/pat_len);					
+					leds[strip_segment.getLEDId(led_ind)] = CRGB(r/pat_len, g/pat_len, b/pat_len);
 				}				
 			}
 		}
@@ -144,36 +159,26 @@ class LinearPatternMapping: public BasePatternMapping {
 
 
 // Get the bounding box of a collection of Spatial Segments
-Bounds get_spatial_segment_bounds(SpatialStripSegment* spatial_segments, uint8_t num_segments) {
-	Point min = Point(32767, 32767, 32767);
-	Point max = Point(-32768, -32768, -32768);
+Bounds get_spatial_segment_bounds(SpatialStripSegment spatial_segments[], uint16_t num_segments) {
+	Point global_max(FLT_MIN, FLT_MIN, FLT_MIN);
+	Point global_min(FLT_MAX, FLT_MAX, FLT_MAX);
 	
-	for (uint8_t i=0; i<num_segments; i++) {
-		SpatialStripSegment spatial_segment = spatial_segments[i];
+	for (uint16_t i=0; i<num_segments; i++) {
+		SpatialStripSegment& spatial_segment = spatial_segments[i];
+		Bounds segment_bounds = spatial_segment.get_bounds();
 		// Update minimums
-		if (spatial_segment.start_pos.x < min.x) 	min.x = spatial_segment.start_pos.x;
-		if (spatial_segment.end_pos.x < min.x) 		min.x = spatial_segment.end_pos.x;
-		
-		if (spatial_segment.start_pos.y < min.y) 	min.y = spatial_segment.start_pos.y;
-		if (spatial_segment.end_pos.y < min.y) 		min.y = spatial_segment.end_pos.y;
-		
-		if (spatial_segment.start_pos.z < min.z) 	min.z = spatial_segment.start_pos.z;
-		if (spatial_segment.end_pos.z < min.z) 		min.z = spatial_segment.end_pos.z;
-		
-		// Update maximums
-		if (spatial_segment.start_pos.x > max.x) 	max.x = spatial_segment.start_pos.x;
-		if (spatial_segment.end_pos.x > max.x) 		max.x = spatial_segment.end_pos.x;
-		
-		if (spatial_segment.start_pos.y > max.y) 	max.y = spatial_segment.start_pos.y;
-		if (spatial_segment.end_pos.y > max.y) 		max.y = spatial_segment.end_pos.y;
-		
-		if (spatial_segment.start_pos.z > max.z) 	max.z = spatial_segment.start_pos.z;
-		if (spatial_segment.end_pos.z > max.z) 		max.z = spatial_segment.end_pos.z;
+		if (segment_bounds.min.x < global_min.x) 	global_min.x = segment_bounds.min.x;
+		if (segment_bounds.min.y < global_min.y) 	global_min.y = segment_bounds.min.y;
+		if (segment_bounds.min.z < global_min.z) 	global_min.z = segment_bounds.min.z;
+
+		if (segment_bounds.max.x > global_max.x) 	global_max.x = segment_bounds.max.x;
+		if (segment_bounds.max.y > global_max.y) 	global_max.y = segment_bounds.max.y;
+		if (segment_bounds.max.z > global_max.z) 	global_max.z = segment_bounds.max.z;
 	}
-	return Bounds(min, max);
+	return Bounds(global_min, global_max);
 }
 
-// Class for defininig mapping configuration of 3DPattern to set of axes with spatial positioning
+// Class for defininig mapping configuration of 3DPattern to set of segments with spatial positioning
 // The SpatialPattern has its own coordinate system (bounds of +/- resolution on each axis),
 // and there is also the physical project coordinate system (the spatial positions of LEDS as defined in SpatialStripSegments)
 // The 'scale' and 'offset' vectors are used to map the pattern coordinate system to project space
@@ -183,14 +188,19 @@ class SpatialPatternMapping: public BasePatternMapping {
 		// Constructor
 		SpatialPatternMapping(
 			SpatialPattern& pattern,   					// Reference to SpatialPattern object
-			SpatialStripSegment* spatial_segments,		// Pointer to Array of SpatialStripSegment to map pattern to
-			uint8_t num_segments,							// Number of SpatialStripSegments (length of spatial_segments)
+			SpatialStripSegment spatial_segments[],	// Array of pointers to SpatialStripSegments to map pattern to
+			uint8_t num_segments,						// Number of SpatialStripSegments (length of spatial_segments)
 			uint16_t frame_delay,  						// Delay between pattern frames (in ms)
 			const char* name="SpatialPatternMapping", 	// Name to give this pattern configuration
 			uint16_t duration=DEFAULT_DURATION,			
 			Point offset=undefinedPoint,				// Translational offset to apply to Project coordinate system before scaling
 			Point scale_factors=undefinedPoint			// Scaling factors to apply to Project coordinate system to map to Pattern coordinates 
-		): BasePatternMapping(frame_delay, duration, name), pattern(pattern), spatial_segments(spatial_segments), num_segments(num_segments), offset(offset), scale_factors(scale_factors)	{
+		): BasePatternMapping(frame_delay, duration, name), 
+		pattern(pattern), 
+		spatial_segments(spatial_segments), 
+		num_segments(num_segments), 
+		offset(offset), 
+		scale_factors(scale_factors)	{
 			// Calculate Project space scale
 			Bounds project_bounds = get_spatial_segment_bounds(spatial_segments, num_segments);
 			this->project_centroid = project_bounds.centre();
@@ -218,22 +228,22 @@ class SpatialPatternMapping: public BasePatternMapping {
 			this->pattern.frameAction(this->frame_time);
 			//DPRINT("Scale Factors");
 			//DPRINTLN(this->scale_factors);
-			// Loop through every LED (axis and axis position combination), determine spatial position and get value
+			// Loop through every LED (segment and segment index combination), determine spatial position and get value
 			for (uint8_t axis_id=0; axis_id < this->num_segments; axis_id++) {
-				SpatialStripSegment& axis = this->spatial_segments[axis_id];
+				SpatialStripSegment& spatial_segment = this->spatial_segments[axis_id];
 				//DPRINT("Axis Vector");
 				//DPRINTLN(axis.end_pos - axis.start_pos);
 				// Loop through all positions on axis
-				for (uint16_t axis_pos=0; axis_pos<axis.strip_segment.segment_len; axis_pos++) {
+				for (uint16_t axis_pos=0; axis_pos < spatial_segment.strip_segment.segment_len; axis_pos++) {
 					// Get position from spatial axis
-					Point pos = axis.getSpatialPosition(axis_pos);
+					Point pos = spatial_segment.getSpatialPosition(axis_pos);
 					//DPRINT("Step");
 					//DPRINTLN(axis.step);
 
 					//DPRINT("LED Pos");
 					//DPRINTLN(pos);
 					// Get LED ID from strip segment
-					uint16_t led_id = axis.strip_segment.getLEDId(axis_pos);
+					uint16_t led_id = spatial_segment.strip_segment.getLEDId(axis_pos);
 					// Translate spatial position to pattern coordinates
 					Point pattern_pos = ((pos - this->offset)).hadamard_product(this->scale_factors);
 					//DPRINT("Pattern Pos");
@@ -256,11 +266,11 @@ class SpatialPatternMapping: public BasePatternMapping {
 		
 	protected:
 		SpatialPattern& pattern;
-		SpatialStripSegment* spatial_segments;
+		SpatialStripSegment* spatial_segments;	// Array of points to SpatialStripSegments to map pattern to
 		uint8_t num_segments;		// Number of configured strip segments to map pattern to
-		Point offset;  			// Offset of Pattern space from Project space (in Project coordinates, before scaling applied)
-		Point scale_factors; 	// Scaling vector for Project space to Pattern space transformation
-		Point project_centroid; // Centre point of project coordinate bounds
+		Point offset;  				// Offset of Pattern space from Project space (in Project coordinates, before scaling applied)
+		Point scale_factors; 		// Scaling vector for Project space to Pattern space transformation
+		Point project_centroid; 	// Centre point of project coordinate bounds
 };
 
 // Allows for mapping a linear pattern to a vector in 3D space
@@ -272,7 +282,7 @@ class LinearToSpatialPatternMapping : public BasePatternMapping {
 		LinearToSpatialPatternMapping (
 			LinearPattern& pattern,   		// LinearPattern object
 			Point pattern_vector,						// Vector to map pattern to
-			SpatialStripSegment* spatial_segments,		// Pointer to Array of SpatialStripSegment to map pattern to
+			SpatialStripSegment spatial_segments[],		// Array of SpatialStripSegments to map pattern to
 			uint8_t num_segments,							// Number of SpatialStripSegments (length of spatial_segments)
 			uint16_t frame_delay,  						// Delay between pattern frames (in ms)
 			const char* name="LinearToSpatialPatternMapping", 	// Name to give this pattern configuration
