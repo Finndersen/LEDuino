@@ -234,16 +234,16 @@ class SpatialPatternMapping: public BasePatternMapping {
 				//DPRINT("Axis Vector");
 				//DPRINTLN(axis.end_pos - axis.start_pos);
 				// Loop through all positions on axis
-				for (uint16_t axis_pos=0; axis_pos < spatial_segment.strip_segment.segment_len; axis_pos++) {
+				for (uint16_t segment_pos=0; segment_pos < spatial_segment.strip_segment.segment_len; segment_pos++) {
 					// Get position from spatial axis
-					Point pos = spatial_segment.getSpatialPosition(axis_pos);
+					Point pos = spatial_segment.getSpatialPosition(segment_pos);
 					//DPRINT("Step");
 					//DPRINTLN(axis.step);
 
 					//DPRINT("LED Pos");
 					//DPRINTLN(pos);
 					// Get LED ID from strip segment
-					uint16_t led_id = spatial_segment.strip_segment.getLEDId(axis_pos);
+					uint16_t led_id = spatial_segment.strip_segment.getLEDId(segment_pos);
 					// Translate spatial position to pattern coordinates
 					Point pattern_pos = ((pos - this->offset)).hadamard_product(this->scale_factors);
 					//DPRINT("Pattern Pos");
@@ -273,21 +273,22 @@ class SpatialPatternMapping: public BasePatternMapping {
 		Point project_centroid; 	// Centre point of project coordinate bounds
 };
 
-// Allows for mapping a linear pattern to a vector in 3D space
-// The middle of the linear pattern path will be aligned with the centre of the bounding box of the spatial strip segments, plus an optional offset
-// The length of the linear pattern path will be equal to the distance through the bounding box in the direction of the desired vector, multipled by scale factor
+// Allows for mapping a linear pattern to a vector (linear path/direction) in 3D space
+// The pattern pixel applied to each LED is determined by the LED's distance from the perpendicular plane at the start of the vector path
+// The middle of the linear pattern path will be aligned with the centre of the bounding box of the spatial strip segments, plus an optional offset (Default 0)
+// The length of the linear pattern path will be equal to the distance through the bounding box in the direction of the desired vector, multipled by scale factor (default 1)
 class LinearToSpatialPatternMapping : public BasePatternMapping {
 	public:
 		// Constructor
 		LinearToSpatialPatternMapping (
-			LinearPattern& pattern,   		// LinearPattern object
+			LinearPattern& pattern,   					// LinearPattern object
 			Point pattern_vector,						// Vector to map pattern to
 			SpatialStripSegment spatial_segments[],		// Array of SpatialStripSegments to map pattern to
-			uint8_t num_segments,							// Number of SpatialStripSegments (length of spatial_segments)
+			uint8_t num_segments,						// Number of SpatialStripSegments (length of spatial_segments)
 			uint16_t frame_delay,  						// Delay between pattern frames (in ms)
 			const char* name="LinearToSpatialPatternMapping", 	// Name to give this pattern configuration
 			uint16_t duration=DEFAULT_DURATION,			
-			uint16_t offset=0,			// Offset of pattern vector start position
+			uint16_t offset=0,				// Offset of pattern vector start position
 			float scale=1,					// Scaling factor to apply to linear pattern vector length
 			bool mirrored=false				// Whether linear pattern is mirrored around start position on vector
 		): BasePatternMapping(frame_delay, duration, name), 	
@@ -301,7 +302,7 @@ class LinearToSpatialPatternMapping : public BasePatternMapping {
 			// Get full length of linear pattern vector within spatial bounding box
 			uint16_t unscaled_path_len = (abs(this->pattern_vector.x*bounds_size.x) + abs(this->pattern_vector.y*bounds_size.y) + abs(this->pattern_vector.z*bounds_size.z))/vector_len;
 			
-			// Get start position of pattern path (centre of bounds - (unscaled_path_len/2 - offset)in direction of pattern_vector)
+			// Get start position of pattern path (centre of bounds - (unscaled_path_len/2 - offset) in direction of pattern_vector)
 			this->path_start_pos = bounds.centre() - (this->pattern_vector * (unscaled_path_len/2 - offset)/vector_len);
 			// Apply scale to full vector length to get desired path length
 			this->path_length = scale * unscaled_path_len;
@@ -310,10 +311,9 @@ class LinearToSpatialPatternMapping : public BasePatternMapping {
 			// Pre-Calculate coefficent D of plane equation (for calculating distance from plane)
 			this->plane_eq_D = pattern_vector.x*this->path_start_pos.x + pattern_vector.y*this->path_start_pos.y + pattern_vector.z*this->path_start_pos.z;
 			// Pre-calculate inverse of pattern vector norm
-			this->inv_pattern_vect_norm = 1/pattern_vector.norm();
-			// Pre-calculate pattern resolution / lenght constants
+			this->inv_pattern_vect_norm = 1/vector_len;
+			// Pre-calculate pattern resolution / length constant
 			this->res_per_len = ((float) this->pattern.resolution-1.0)/this->path_length;
-			this->inverse_vector_len_scale = 1/vector_len;
 		}
 		
 		
@@ -351,19 +351,19 @@ class LinearToSpatialPatternMapping : public BasePatternMapping {
 			// Loop through every LED (axis and axis position combination), determine spatial position and appropriate state from pattern
 			for (uint8_t axis_id=0; axis_id < this->num_segments; axis_id++) {
 				SpatialStripSegment& spatial_axis = this->spatial_segments[axis_id];
-				// Loop through all positions on axis
-				for (uint16_t axis_pos=0; axis_pos<spatial_axis.strip_segment.segment_len; axis_pos++) {
+				// Loop through all positions on segment
+				for (uint16_t segment_pos=0; segment_pos<spatial_axis.strip_segment.segment_len; segment_pos++) {
 					// Get global LED ID from strip segment
-					uint16_t led_id = spatial_axis.strip_segment.getLEDId(axis_pos);
+					uint16_t led_id = spatial_axis.strip_segment.getLEDId(segment_pos);
 					// Get spatial position of LED
-					Point led_pos = spatial_axis.getSpatialPosition(axis_pos);
+					Point led_pos = spatial_axis.getSpatialPosition(segment_pos);
 					//DPRINT("LED Pos");
 					//DPRINTLN(led_pos);
 					// If mirroring is not enabled, check if LED pos is in pattern_vector direction from start_pos
 					if (!this->mirrored) {
 						//Point rel_pos = led_pos - this->path_start_pos;
 						// Get projected LED position on pattern path
-						Point pos_on_path = led_pos.hadamard_product(this->pattern_vector)*this->inverse_vector_len_scale;
+						Point pos_on_path = led_pos.hadamard_product(this->pattern_vector) * this->inv_pattern_vect_norm;
 						//((rel_pos.x*this->pattern_vector.x < 0) || (rel_pos.y*this->pattern_vector.y < 0) || (rel_pos.z*this->pattern_vector.z < 0))
 						if (!between(pos_on_path.x, this->path_start_pos.x, this->path_end_pos.x) || 
 							!between(pos_on_path.y, this->path_start_pos.y, this->path_end_pos.y) || 
@@ -386,7 +386,6 @@ class LinearToSpatialPatternMapping : public BasePatternMapping {
 	protected:
 		LinearPattern& pattern;
 		Point pattern_vector;   // Vector of direction to apply linear pattern
-		float inverse_vector_len_scale;		// Precomputed 1/length of pattern vector as fraction of 256
 		SpatialStripSegment* spatial_segments;
 		uint8_t num_segments;						// Number of configured strip segments to map pattern to
 		uint16_t path_length;				// Length of path that linear pattern will travel through
@@ -397,13 +396,15 @@ class LinearToSpatialPatternMapping : public BasePatternMapping {
 
 // Allows for multiple pattern mappings to be applied at the same time
 // Can have multiple LinearPatternMapping or SpatialPatternMappings running concurrently on different parts of the same strip of LEDS
+// Will run the new frame logic of all included patterns, so could be CPU intensive and cause lag
+// Need to specify a global frame_delay which will override that of the included PatternMappings
 class MultiplePatternMapping : public BasePatternMapping {
 	public:
 		// Constructor
 		MultiplePatternMapping(
-			BasePatternMapping** mappings,	// Pointer to Array of pointers to other PatternMappings to apply
+			BasePatternMapping** mappings,		// Array of pointers to other PatternMappings to apply
 			uint8_t num_mappings,				// Number of Pattern Mappings (length of mappings)
-			uint16_t frame_delay,  			// Delay between pattern frames (in ms)
+			uint16_t frame_delay,  				// Delay between pattern frames (in ms)
 			const char* name="MultiplePatternMapping", 			// Name to give this pattern configuration
 			uint16_t duration=DEFAULT_DURATION
 		): BasePatternMapping(frame_delay, duration, name), mappings(mappings), num_mappings(num_mappings)	{}
