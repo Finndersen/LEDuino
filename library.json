@@ -1,0 +1,36 @@
+{
+    "name": "LEDuino",
+    "description": "LEDuino is set of components for defining patterns and mapping them to a configuration of addressable LEDs.",
+    "keywords": "led,pattern,fastled",
+    "authors": [
+        {
+            "name": "Finn Andersen",
+            "url": "https://github.com/Finndersen",
+            "maintainer": true
+        }
+    ],
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/Finndersen/LEDuino.git"
+    },
+    "version": "0.1",
+    "license": "MIT",
+    "homepage": "https://github.com/Finndersen/LEDuino",
+    "frameworks": "arduino",
+    "platforms": "atmelavr, atmelsam, freescalekinetis, nordicnrf51, nxplpc, ststm32, teensy, espressif8266, espressif32, nordicnrf52",
+    "headers": "LEDuino.h",
+    "export": {
+        "exclude": [
+            "docs",
+            "extras"
+        ]
+    },
+    "build": {
+        "srcFilter": [
+            "+<*.c>",
+            "+<*.cpp>",
+            "+<*.h>"
+        ],
+        "libArchive": false
+    }
+}
