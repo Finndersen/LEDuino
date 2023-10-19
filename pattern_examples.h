@@ -1,14 +1,20 @@
-#include <LEDPatternMapper.h>
 #include <FastLED.h>
+#include "Pattern.h"
 
 // Simple moving pulse of light along axis. Pulse has a bright head with a tapering tail
 // LinearStatePattern is used for performance when mapped to many segments (only need to calculate LED values once per frame)
 template<uint16_t t_resolution> 
 class MovingPulse: public LinearStatePattern<t_resolution>   {
   public:
-    MovingPulse(uint8_t pulse_len=3, uint8_t speed=4, CRGBPalette16 colour_palette = White_p):
+    MovingPulse(
+		uint8_t pulse_len=3, 	// Length of pulse 
+		uint8_t speed=4, 		// Number of virtual pixels to move each step
+		CRGBPalette16 colour_palette = RainbowColors_p):
       LinearStatePattern<t_resolution>(colour_palette), 
-	  head_pos(0), pulse_len(pulse_len), speed(speed), tail_interpolator(Interpolator(0, 255, pulse_len + 1, 0))  {}
+	  head_pos(0), 
+	  pulse_len(pulse_len), 	
+	  speed(speed), 
+	  tail_interpolator(Interpolator(0, 255, pulse_len + 1, 0))  {}
 
     // Update pulse position (on virtual axis)
     void frameAction(uint32_t frame_time)  override {
@@ -39,9 +45,9 @@ class MovingPulse: public LinearStatePattern<t_resolution>   {
 
   private:
 	
-    uint16_t head_pos;    			// Position of head of pulse
-    uint8_t pulse_len;        				// Length of pulse (in actual pixels). Virtual pulse width is pulse_len*interpolation_factor
-	uint8_t speed; 						// NUmber of virtual pixels to move each step
+    uint16_t head_pos;    				// Position of head of pulse
+    uint8_t pulse_len;        			// Length of pulse 
+	uint8_t speed; 						// Number of virtual pixels to move each step
 	Interpolator tail_interpolator;  	// Linear Interpolator for pulse tail brightness
 	
 };
@@ -54,7 +60,6 @@ class RandomRainbows: public LinearStatePattern<t_resolution>  {
 	
 	void reset() override{
 		LinearStatePattern<t_resolution>::reset();
-		this->interpolation_factor = 1;
 		this->pos = 0;
 		this->randomize_state();
 	}
@@ -75,19 +80,18 @@ class RandomRainbows: public LinearStatePattern<t_resolution>  {
 			this->randomize_state();
 		}
 		if (direction) {
-			this->pos = (this->pos + this->speed) % (this->resolution*this->interpolation_factor);
+			this->pos = (this->pos + this->speed) % this->resolution;
 		} else {
-			this->pos = wrap_subtract(this->pos, this->speed, this->resolution*this->interpolation_factor);
+			this->pos = wrap_subtract(this->pos, this->speed, this->resolution);
 		}
-		for (uint16_t i=0; i<this->resolution; i++) {
+		for (uint16_t i = 0; i < this->resolution; i++) {
 		  this->pattern_state[i] = this->get_pos_value(i);
 		}
 		
 	}
 	 
 	CRGB get_pos_value(uint16_t i)  {
-		
-		uint8_t virtual_pos = (255*(i*this->interpolation_factor + this->pos))/(this->interpolation_factor*this->resolution);
+		uint8_t virtual_pos = (255*(i + this->pos))/(this->resolution);
 		uint8_t val = cubicwave8((virtual_pos*this->scale_factor)%255);
 		return this->colorFromPalette((val+this->colour_offset)%255, this->dim ? val>>2 : val);
 	}
@@ -95,10 +99,9 @@ class RandomRainbows: public LinearStatePattern<t_resolution>  {
 	protected:
 		uint8_t speed;
 		bool direction=false;
-		uint8_t pos;    // Position from 0 to interpolation_factor*resolution
-		uint8_t interpolation_factor = 1;
+		uint8_t pos;    // Position from 0 to resolution
 		uint8_t colour_offset;
-		uint16_t randomize_time;
+		uint16_t randomize_time;	// How long until state is randomized again
 		uint8_t scale_factor;
 		bool dim;  //Whether to make pattern very dim (can look cool)
 };
@@ -111,7 +114,8 @@ template<uint16_t t_resolution>
 class PridePattern: public LinearStatePattern<t_resolution>	{
 	public:
 		PridePattern(uint8_t speed_factor=4):
-		  LinearStatePattern<t_resolution>(RainbowColors_p), speed_factor(speed_factor) {}
+		  LinearStatePattern<t_resolution>(RainbowColors_p), 
+		  speed_factor(speed_factor) {}
 		
 		void frameAction(uint32_t frame_time)	override {
 			static uint32_t sPseudotime = 0;  // pseudo-time elapsed since pattern start
@@ -158,7 +162,7 @@ class PridePattern: public LinearStatePattern<t_resolution>	{
 			}
 		}
 	protected:
-		uint8_t speed_factor;  // Factor to increase rate of change of pattern parameters
+		const uint8_t speed_factor;  // Factor to increase rate of change of pattern parameters
 };
 
 
@@ -405,7 +409,7 @@ class GrowThenShrink : public LinearPattern  {
 
 		}
 
-		CRGB getLEDValue(uint16_t i)  override  {
+		CRGB getPixelValue(uint16_t i)  const override  {
 			if ((this->tail_pos <= i) && (i <= this->head_pos)) 	{
 				return this->colorFromPalette((i*255)/this->resolution);
 			} else {
@@ -677,7 +681,7 @@ class FirePattern: public LinearPattern   {
 		}
 	}
 	
-	CRGB getLEDValue(uint16_t i)  override {
+	CRGB getPixelValue(uint16_t i) const override {
 		// Get heat value, Scale from 0-255 down to 0-240, select colour from palette
 		uint8_t colorindex = scale8(this->heat[i], 240);
 		// Constrain base heat (so base of fire doesnt look too bright
@@ -698,14 +702,14 @@ class GrowingSphere: public SpatialPattern	{
 		GrowingSphere(
 			uint8_t speed=1,
 			CRGBPalette16 colour_palette=RainbowColors_p
-		) : SpatialPattern(colour_palette), speed(speed) {}
+		) : SpatialPattern(colour_palette), 
+		speed(speed) {}
 		
 		void reset()	override {
 			SpatialPattern::reset();
 			this->radius = 0;
 			this->growing = true;
 		}
-		
 		
 		void frameAction(uint32_t frame_time) override {
 			if (this->growing) {
@@ -720,9 +724,9 @@ class GrowingSphere: public SpatialPattern	{
 					this->radius -= this->speed;
 				}
 			}
-		}
+		};
 		
-		CRGB getLEDValue(Point point) override { 
+		CRGB getPixelValue(Point point) const override { 
 			float point_distance = point.norm();
 			if (point_distance > this->radius) 	{
 				return CRGB::Black;
@@ -731,7 +735,7 @@ class GrowingSphere: public SpatialPattern	{
 			}
 		}
 	private:
-		uint8_t speed; 		// Speed at which sphere grows and shrinks
+		const uint8_t speed; 		// Speed at which sphere grows and shrinks
 		uint16_t radius;   	// Current radius of sphere
 		bool growing;		// Whether sphere is growing or shrinking
 };

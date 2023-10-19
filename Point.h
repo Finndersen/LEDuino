@@ -73,9 +73,9 @@ class Point: public Printable {
 		};
 		
 		template<typename T>
-		Point operator*(const T RHS) { return Point(*this) *= RHS; };
+		Point operator*(const T RHS) const { return Point(*this) *= RHS; };
 		template<typename T>
-		Point operator/(const T RHS) { return Point(*this) /= RHS; };
+		Point operator/(const T RHS) const { return Point(*this) /= RHS; };
 		
 		// Element-wise multiplication and division
 		Point hadamard_product(const Point &RHS) {return Point(this->x*RHS.x, this->y*RHS.y, this->z*RHS.z); };

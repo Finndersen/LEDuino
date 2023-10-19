@@ -21,8 +21,8 @@ class StripSegment {
 			strip_len(strip_len), 
 			reverse(reverse) {}
 
-		// Get LED Strip ID from segment value
-		uint16_t getLEDId(uint16_t segment_pos){
+		// Get LED Strip ID from segment position
+		uint16_t getLEDId(uint16_t segment_pos) const {
 			uint16_t led_id;
 			// Limit value to maximum length
 			if (segment_pos > this->segment_len)	{
@@ -65,7 +65,7 @@ class StripSegment {
 class SpatialStripSegmentInterface 	{
 	public:
 		SpatialStripSegmentInterface(
-			const StripSegment strip_segment 		// LED Strip segment
+			const StripSegment& strip_segment 		// LED Strip segment
 		): strip_segment(strip_segment) {}
 
 		// Get spatial bounding area covered by this spatial segment
@@ -73,7 +73,7 @@ class SpatialStripSegmentInterface 	{
 		// Get spatial position of an LED on the segment 
 		virtual Point getSpatialPosition(uint16_t segment_pos)	= 0;
 
-		StripSegment strip_segment;		// LED Strip segment for axis
+		const StripSegment& strip_segment;		// LED Strip segment for axis
 
 };
 
@@ -87,14 +87,14 @@ class SpatialStripSegment : public SpatialStripSegmentInterface {
 	public:
 		// Construct with pre-defined array of LED positions
 		SpatialStripSegment(
-			const StripSegment strip_segment, 		// LED Strip segment
+			const StripSegment& strip_segment, 		// LED Strip segment
 			Point* led_positions 					// Array of coordinates of segment LEDs (same length as segment)
 		): SpatialStripSegmentInterface(strip_segment), led_positions(led_positions) {}
 
 		// If the segment is straight and LEDs are evenly spaced, can initialise with the start and end positions 
 		// of the segment and the coordinates for each LED will be automatically calculated
 		SpatialStripSegment(
-			const StripSegment strip_segment, 	// LED Strip segment
+			const StripSegment& strip_segment, 	// LED Strip segment
 			Point* led_positions, 				// Empty pre-allocated array (same length as segment) to fill with calculated values 
 			Point start_pos, 					// Start position of straight segment in 3D  (Position of first LED)
 			Point end_pos						// End position of straight segment in 3D space (Position of last LED)
