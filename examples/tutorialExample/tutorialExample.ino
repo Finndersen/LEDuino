@@ -1,6 +1,5 @@
 #include <FastLED.h>
-#include <MemoryFree.h>
-#include <LEDController.h>
+#include <LEDuino.h>
 
 void setup() {
   // put your setup code here, to run once:
