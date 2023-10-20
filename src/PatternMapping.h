@@ -5,7 +5,8 @@
 #include "StripSegment.h"
 #include "Pattern.h"
 #include "Point.h"
-#define DEFAULT_DURATION 15
+#define DEFAULT_DURATION 15			// 15 second duration
+#define DEFAULT_FRAME_DELAY 20		// 20 ms frame delay (50 FPS)
 
 // Base class for defining a mapping of a pattern to some kind of configuration of LEDS
 // E.g. a linear segment (single axis) or 2D/3D spatial array of LEDs composed of multiple axes
@@ -13,9 +14,9 @@ class BasePatternMapping {
 	public:
 		// Constructor
 		BasePatternMapping(
-			uint16_t frame_delay=20,  // Delay between pattern frames (in ms)
-			uint16_t duration=DEFAULT_DURATION,
-			const char* name="BasePatternMapping"): 
+			uint16_t frame_delay=DEFAULT_FRAME_DELAY,  	// Delay between pattern frames (in ms)
+			uint16_t duration=DEFAULT_DURATION,			// Duration in seconds
+			const char* name=""): 
 			name(name), 
 			duration(duration*1000), 
 			frame_delay(frame_delay)  {}
@@ -69,12 +70,13 @@ class LinearPatternMapping: public BasePatternMapping {
 	public:
 		// Constructor
 		LinearPatternMapping(
-			LinearPattern& pattern,   		// LinearPattern object
-			StripSegment* strip_segments,	// Array of StripSegments to map pattern to
-			uint8_t num_segments,			// Number of axes (length of strip_segments)
-			uint16_t frame_delay,  			// Delay between pattern frames (in ms)
-			const char* name="LinearPatternMapping", // Name to give this pattern configuration
-			uint16_t duration=DEFAULT_DURATION
+			LinearPattern& pattern,   					// LinearPattern object
+			StripSegment* strip_segments,				// Array of StripSegments to map pattern to
+			uint8_t num_segments,						// Number of axes (length of strip_segments)
+			uint16_t frame_delay=DEFAULT_FRAME_DELAY,  	// Delay between pattern frames (in ms)
+			uint16_t duration=DEFAULT_DURATION,			// Duration in seconds
+			const char* name="" 						// Name to give this pattern configuration
+
 		): BasePatternMapping(frame_delay, duration, name), 
 		pattern(pattern), 
 		strip_segments(strip_segments), 
@@ -96,55 +98,65 @@ class LinearPatternMapping: public BasePatternMapping {
 			this->pattern.frameAction(this->frame_time);			
 			uint16_t pat_len = this->pattern.resolution;
 			// Map pattern to all registered strip segments (will be scaled to each segment length)
-			for (uint8_t seg_id=0; seg_id<this->num_segments; seg_id++) {
+			for (uint8_t seg_id=0; seg_id < this->num_segments; seg_id++) {
 				StripSegment& strip_segment = this->strip_segments[seg_id];
 				uint16_t seg_len = strip_segment.segment_len;
 				// For caching previous LED value
 				uint16_t prev_pat_ind = 65535; 
 				CRGB led_val = CRGB(0, 0, 0);
 				CRGB prev_led_val = CRGB(0, 0, 0);
-				// Perform downsampling of pattern data to strip segment. 
-				// Basically trying to scale pattern of length pat_len onto LED segment of length seg_len
-				// The value of each actual LED will be derived from a weighted average of values from a range of virtual pattern pixels
-				// To represent weights using integers (for efficiency), each pattern pixel will be weighted as a fraction of segment length seg_len (for convenience),
-				// Therefore a weight value of 'seg_len' corresponds to weighting of 1 for that pattern pixel
-				// The sum of weights of all pattern pixels for a strip segment LED is equal to pat_len (pattern length)
-				for (uint16_t led_ind=0; led_ind<seg_len; led_ind++) 	{					
-					// Get index of first pattern virtual pixel to downsample for current LED
-					uint16_t start_index = (led_ind*pat_len)/seg_len;
-					// Weighting to use on first pattern pixel 
-					uint16_t first_weight = seg_len - (led_ind*pat_len - start_index*seg_len);
-					uint16_t remaining_weight = pat_len;
-					// Cumulative RGB colour values 
-					uint16_t r = 0, g = 0, b = 0;
-					// Add weighted values to colour components from pattern state
-					uint16_t pat_ind = start_index;
-					do {
-						// If pat_len is not an integer multiple of seg_len, then first pat_ind for an LED will be equal to the last pat_ind of the previous LED
-						if (pat_ind == prev_pat_ind) {
-							led_val = prev_led_val;
-						} else {
-							led_val = this->pattern.getPixelValue(pat_ind);
-						}
-						uint16_t weight;
-						if (pat_ind == start_index) {
-							weight = first_weight;
-						} else if (remaining_weight > seg_len) {
-							weight = seg_len;
-						} else {
-							weight = remaining_weight;
-						}
-						r += weight*led_val.red;
-						g += weight*led_val.green;
-						b += weight*led_val.blue;
-						prev_pat_ind = pat_ind;
-						prev_led_val = led_val;
-						pat_ind += 1;
-						remaining_weight -= weight;
-						
-					} while (remaining_weight>0);
-					// Assign downsampled pixel value
-					leds[strip_segment.getLEDId(led_ind)] = CRGB(r/pat_len, g/pat_len, b/pat_len);
+
+				for (uint16_t led_seg_ind=0; led_seg_ind<seg_len; led_seg_ind++) 	{		
+					// Get LED strip index for LED 
+					uint16_t led_strip_ind = strip_segment.getLEDId(led_seg_ind);
+
+					if (seg_len == pat_len) {
+						// Segment length is equal to pattern pixel resolution, no need to downsample
+						leds[led_strip_ind] = this->pattern.getPixelValue(led_seg_ind);
+					} else {
+						// Perform downsampling of pattern data to strip segment. 
+						// Basically trying to scale pattern of length pat_len onto LED segment of length seg_len
+						// The value of each actual LED will be derived from a weighted average of values from a range of virtual pattern pixels
+						// To represent weights using integers (for efficiency), each pattern pixel will be weighted as a fraction of segment length seg_len (for convenience),
+						// Therefore a weight value of 'seg_len' corresponds to weighting of 1 for that pattern pixel
+						// The sum of weights of all pattern pixels for a strip segment LED is equal to pat_len (pattern length)
+						// Get index of first pattern virtual pixel to downsample for current LED
+						uint16_t start_index = (led_seg_ind*pat_len)/seg_len;
+						// Weighting to use on first pattern pixel 
+						uint16_t first_weight = seg_len - (led_seg_ind*pat_len - start_index*seg_len);
+						uint16_t remaining_weight = pat_len;
+						// Cumulative RGB colour values 
+						uint16_t r = 0, g = 0, b = 0;
+						// Add weighted values to colour components from pattern state
+						uint16_t pat_ind = start_index;
+						do {
+							// If pat_len is not an integer multiple of seg_len, then first pat_ind for an LED will be equal to the last pat_ind of the previous LED
+							if (pat_ind == prev_pat_ind) {
+								led_val = prev_led_val;
+							} else {
+								led_val = this->pattern.getPixelValue(pat_ind);
+							}
+							uint16_t weight;
+							if (pat_ind == start_index) {
+								weight = first_weight;
+							} else if (remaining_weight > seg_len) {
+								weight = seg_len;
+							} else {
+								weight = remaining_weight;
+							}
+							r += weight*led_val.red;
+							g += weight*led_val.green;
+							b += weight*led_val.blue;
+							prev_pat_ind = pat_ind;
+							prev_led_val = led_val;
+							pat_ind += 1;
+							remaining_weight -= weight;
+							
+						} while (remaining_weight>0);
+
+						// Assign downsampled pixel value					
+						leds[led_strip_ind] = CRGB(r/pat_len, g/pat_len, b/pat_len);
+					}
 				}				
 			}
 		}
@@ -199,11 +211,11 @@ class SpatialPatternMapping: public BasePatternMapping {
 			SpatialPattern& pattern,   					// Reference to SpatialPattern object
 			SpatialStripSegment spatial_segments[],		// Array of SpatialStripSegments to map pattern to
 			uint8_t num_segments,						// Number of SpatialStripSegments (length of spatial_segments)
-			uint16_t frame_delay,  						// Delay between pattern frames (in ms)
-			const char* name="SpatialPatternMapping", 	// Name to give this pattern configuration
+			Point offset,								// Translational offset to apply to Project coordinate system before scaling
+			Point scale_factors,						// Scaling factors to apply to Project coordinate system to map to Pattern coordinates 
+			uint16_t frame_delay=DEFAULT_FRAME_DELAY,  	// Delay between pattern frames (in ms)
 			uint16_t duration=DEFAULT_DURATION,			
-			Point offset=undefinedPoint,				// Translational offset to apply to Project coordinate system before scaling
-			Point scale_factors=undefinedPoint			// Scaling factors to apply to Project coordinate system to map to Pattern coordinates 
+			const char* name="" 						// Name to give this pattern configuration
 		): BasePatternMapping(frame_delay, duration, name), 
 		pattern(pattern), 
 		spatial_segments(spatial_segments), 
@@ -224,7 +236,17 @@ class SpatialPatternMapping: public BasePatternMapping {
 				this->offset = this->project_centroid;
 			}
 		}
-		
+
+		// Constructor with defaults
+		SpatialPatternMapping(
+			SpatialPattern& pattern,   					// Reference to SpatialPattern object
+			SpatialStripSegment spatial_segments[],		// Array of SpatialStripSegments to map pattern to
+			uint8_t num_segments,						// Number of SpatialStripSegments (length of spatial_segments)
+			uint16_t frame_delay=DEFAULT_FRAME_DELAY,  	// Delay between pattern frames (in ms)
+			uint16_t duration=DEFAULT_DURATION,			
+			const char* name="" 						// Name to give this pattern configuration
+		): SpatialPatternMapping(pattern, spatial_segments, num_segments, undefinedPoint, undefinedPoint, frame_delay, duration, name) {}
+
 		// Initialise/Reset pattern state
 		virtual void reset() override {		
 			BasePatternMapping::reset();
@@ -285,12 +307,12 @@ class LinearToSpatialPatternMapping : public BasePatternMapping {
 			Point pattern_vector,						// Vector to map pattern to
 			SpatialStripSegment spatial_segments[],		// Array of SpatialStripSegments to map pattern to
 			uint8_t num_segments,						// Number of SpatialStripSegments (length of spatial_segments)
-			uint16_t frame_delay,  						// Delay between pattern frames (in ms)
-			const char* name="LinearToSpatialPatternMapping", 	// Name to give this pattern configuration
-			uint16_t duration=DEFAULT_DURATION,			
-			int16_t offset=0,				// Offset of pattern vector start position
-			float scale=1,					// Scaling factor to apply to linear pattern vector length
-			bool mirrored=true				// Whether linear pattern is mirrored around start position on vector
+			uint16_t frame_delay=DEFAULT_FRAME_DELAY,  	// Delay between pattern frames (in ms)
+			uint16_t duration=DEFAULT_DURATION,	
+			int16_t offset=0,							// Offset of pattern vector start position
+			float scale=1,								// Scaling factor to apply to linear pattern vector length
+			bool mirrored=true,							// Whether linear pattern is mirrored around start position on vector
+			const char* name="" 						// Name to give this pattern configuration		
 		): BasePatternMapping(frame_delay, duration, name), 	
 		pattern(pattern), 
 		pattern_vector(pattern_vector), 
@@ -319,8 +341,7 @@ class LinearToSpatialPatternMapping : public BasePatternMapping {
 			// Pre-calculate pattern resolution / length constant
 			this->res_per_len = ((float) this->pattern.resolution-1.0)/this->path_length;
 		}
-		
-		
+
 		// Initialise/Reset pattern state
 		virtual void reset() override {
 			BasePatternMapping::reset();
@@ -396,11 +417,11 @@ class MultiplePatternMapping : public BasePatternMapping {
 	public:
 		// Constructor
 		MultiplePatternMapping(
-			BasePatternMapping** mappings,		// Array of pointers to other PatternMappings to apply
-			uint8_t num_mappings,				// Number of Pattern Mappings (length of mappings)
-			uint16_t frame_delay,  				// Delay between pattern frames (in ms)
-			const char* name="MultiplePatternMapping", 			// Name to give this pattern configuration
-			uint16_t duration=DEFAULT_DURATION
+			BasePatternMapping** mappings,				// Array of pointers to other PatternMappings to apply
+			uint8_t num_mappings,						// Number of Pattern Mappings (length of mappings)
+			uint16_t frame_delay=DEFAULT_FRAME_DELAY,  	// Delay between pattern frames (in ms)
+			uint16_t duration=DEFAULT_DURATION,
+			const char* name="" 						// Name to give this pattern configuration
 		): BasePatternMapping(frame_delay, duration, name), mappings(mappings), num_mappings(num_mappings)	{}
 
 		// Initialise/Reset pattern state
