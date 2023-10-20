@@ -87,9 +87,7 @@ class LinearStatePattern : public LinearPattern	{
 		
 		virtual CRGB getPixelValue(uint16_t i) const override {
 			// Limit index to max res
-			if (i >= t_resolution) {
-				i = t_resolution - 1;
-			}
+			i = limit(i, this->resolution - 1);
 			//Read value from pattern_state
 			return this->pattern_state[i];
 		}

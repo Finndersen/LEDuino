@@ -61,6 +61,7 @@ class PatternController {
 		}
 		// Set current active pattern mapper by array index
 		void setPatternMapping(uint8_t mapping_id)   {
+			mapping_id = limit(mapping_id, this->num_mappings-1);
 			this->current_mapping_id = mapping_id;
 			this->current_mapping = this->pattern_mappings[mapping_id];
 			#ifdef LEDUINO_DEBUG

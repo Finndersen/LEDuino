@@ -23,9 +23,7 @@ class StripSegment {
 		uint16_t getLEDId(uint16_t segment_pos) const {
 			uint16_t led_id;
 			// Limit value to maximum length
-			if (segment_pos > this->segment_len)	{
-				segment_pos = this->segment_len;
-			}
+			segment_pos = limit(segment_pos, this->segment_len-1);
 			if (this->reverse)  {
 				// Detect wrap around from 0 back to end of LED strip
 				led_id = wrap_subtract(this->start_offset, segment_pos+1, this->strip_len-1);
@@ -111,9 +109,7 @@ class SpatialStripSegment : public SpatialStripSegmentInterface {
 		// Get spatial position of an LED on the segment 
 		Point getSpatialPosition(uint16_t segment_pos)	{
 			// Constrain to max position
-			if (segment_pos > this->strip_segment.segment_len) {
-				segment_pos = this->strip_segment.segment_len;
-			}
+			segment_pos = limit(segment_pos, this->strip_segment.segment_len-1);
 			return this->led_positions[segment_pos];
 		}
 		

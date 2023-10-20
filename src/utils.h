@@ -7,6 +7,9 @@
 // Check whether a is between x and y (inclusive)
 #define between(a, x, y) (y >= x ? (a >= x && a <= y) : (a >= y && a <= x))
 
+// Limit maximum value
+#define limit(x, max) (x > max ? max : x)
+
 // Used for interpolating values on a linear gradient determined by two provided points
 class Interpolator	{
 	public:
