@@ -36,8 +36,15 @@ Otherwise, for manual installation:
  4. Restart Arduino IDE
 
 ## Getting Started
-The best way to get started and learn how to use the library is to check out the [tutorial](https://github.com/Finndersen/LEDController/wiki/Tutorial).
+The best way to get started and learn how to use the library is to check out the [tutorial](https://github.com/Finndersen/LEDuino/wiki/Tutorial).
 
-Then take a look at the [Reference](https://github.com/Finndersen/LEDController/wiki/Reference) for more in-depth details, and check out some [Examples](https://github.com/Finndersen/LEDController/wiki/Examples) to see how it might work for your project.
+Then take a look at the [Reference](https://github.com/Finndersen/LEDuino/wiki/Reference) for more in-depth details, and check out some [Examples](https://github.com/Finndersen/LEDuino/wiki/Examples) to see how it might work for your project.
 
-NOTE: This is a project I have developed for my own personal use but figured could be quite useful to others as well, so it has not been tested extensively in many configurations. Please let me know if you have any issues or ideas!
+## Development
+This is a project I have developed for my own personal use but figured could be quite useful to others as well, so it has not been tested extensively in many configurations. Please let me know if you have any issues or ideas!
+
+**TODO / Future work:**
+- Add more patterns and pallettes
+- Integrate audio reactivity into the framework
+- Add support for easily configuring LED matrix displays
+- Bluetooth/remote control support
