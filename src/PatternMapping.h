@@ -5,97 +5,76 @@
 #include "StripSegment.h"
 #include "Pattern.h"
 #include "Point.h"
-#define DEFAULT_DURATION 15			// 15 second duration
-#define DEFAULT_FRAME_DELAY 20		// 20 ms frame delay (50 FPS)
 
-// Base class for defining a mapping of a pattern to some kind of configuration of LEDS
+
+// Base interface class for defining a mapping of a pattern to some kind of configuration of LEDS
 // E.g. a linear segment (single axis) or 2D/3D spatial array of LEDs composed of multiple axes
 class BasePatternMapping {
 	public:
-		// Constructor
-		BasePatternMapping(
-			uint16_t frame_delay=DEFAULT_FRAME_DELAY,  	// Delay between pattern frames (in ms)
-			uint16_t duration=DEFAULT_DURATION,			// Duration in seconds
-			const char* name=""): 
-			name(name), 
-			duration(duration*1000), 
-			frame_delay(frame_delay)  {}
+		// Initialise/Reset pattern state
+		virtual void reset() {};
 
 		// Excute new frame of pattern and map results to LED array
-		virtual void newFrame(CRGB* leds) {
-			this->frame_time = millis() - this->start_time;
-			// Sub-classes will need to override this method and implement further logic
-		}
-		
-		// Initialise/Reset pattern state
-		virtual void reset() {		
-			#ifdef LEDUINO_DEBUG
-				Serial.print("Initialising pattern: ");
-				Serial.println(this->name);
-				Serial.flush()
-			#endif
-			this->start_time = millis();
-			this->frame_time = 0;
-		};
-		
-		// Determine whether pattern has expired (exceeded duration)	
-		bool expired()	{
-			return this->frame_time >= this->duration;
-		};
-		
-		// Whether it is time to start a new frame (frame_delay has elapsed since previous frame time)
-		bool frameReady()	{
-			return (millis() - this->start_time - this->frame_time) >= this->frame_delay;
-		};
+		virtual void newFrame(CRGB* leds, uint16_t frame_time) = 0;
 		
 		// Set palette of underlying pattern(s)
 		virtual void setPalette(CRGBPalette16 new_palette)	{};
 		
 		// Reset palette of underlying pattern(s) to one it was initialised with
 		virtual void resetPalette()	{};
-		
-		const char* name;  // Name or description of pattern
-	protected:
-		uint32_t frame_time;			// Time of the current frame since pattern started (in ms)
-		uint32_t start_time;			// Absolute time pattern was initialised (in ms)
-		const uint16_t duration;  			// Duration of pattern mapping configuration (in ms)
-		const uint16_t frame_delay;			// Delay between pattern frames (in ms)
 
 };
 
+// Base class for Mappings that use a LinearPattern
+class BaseLinearPatternMapping: public BasePatternMapping {
+	public:
+		BaseLinearPatternMapping(
+			LinearPattern& pattern   					// LinearPattern object
+		): pattern(pattern) {}
+
+		// Initialise/Reset pattern state
+		void reset() override {
+			this->pattern.reset();
+		};
+
+		// Set palette of underlying pattern(s)
+		void setPalette(CRGBPalette16 new_palette) override	{
+			this->pattern.setPalette(new_palette);
+		};
+		
+		// Reset palette of underlying pattern(s) to one it was initialised with
+		void resetPalette()	override {
+			this->pattern.resetPalette();
+		};		
+		
+	protected:
+		LinearPattern& pattern;
+};
 
 // Defines a mapping of a LinearPattern to a collection of LED Strip Segments
 // The pattern will be interpolated to the length of each strip segment
-class LinearPatternMapping: public BasePatternMapping {
+class LinearPatternMapping: public BaseLinearPatternMapping {
 	public:
 		// Constructor
 		LinearPatternMapping(
 			LinearPattern& pattern,   					// LinearPattern object
 			StripSegment* strip_segments,				// Array of StripSegments to map pattern to
-			uint8_t num_segments,						// Number of axes (length of strip_segments)
-			uint16_t frame_delay=DEFAULT_FRAME_DELAY,  	// Delay between pattern frames (in ms)
-			uint16_t duration=DEFAULT_DURATION,			// Duration in seconds
-			const char* name="" 						// Name to give this pattern configuration
-
-		): BasePatternMapping(frame_delay, duration, name), 
-		pattern(pattern), 
+			uint8_t num_segments						// Number of axes (length of strip_segments)
+		): 
+		BaseLinearPatternMapping(pattern), 
 		strip_segments(strip_segments), 
 		num_segments(num_segments) {}
 
-		// Initialise/Reset pattern state
-		virtual void reset() override {
-			BasePatternMapping::reset();
-			this->pattern.reset();
-		};
+
 		
 		// Excute new frame of pattern and map results to LED array
 		// This implementation involves calling pattern.getPixelValue() multiple times for the same pattern pixel index which is inefficient
 		// Alternatively, it could be called once for every index and the results stored in an array which can be re-used
 		// The two approaches are a trade-off between memory and CPU usage, but generally for linear patterns CPU is not a bottleneck,
 		// and LinearStatePatterns have their own pixel array anyway and can be used if required
-		void newFrame(CRGB* leds)	override {
-			BasePatternMapping::newFrame(leds);			
-			this->pattern.frameAction(this->frame_time);			
+		void newFrame(CRGB* leds, uint16_t frame_time)	override {
+			// Run pattern logic
+			this->pattern.frameAction(frame_time);			
 			uint16_t pat_len = this->pattern.resolution;
 			// Map pattern to all registered strip segments (will be scaled to each segment length)
 			for (uint8_t seg_id=0; seg_id < this->num_segments; seg_id++) {
@@ -161,18 +140,7 @@ class LinearPatternMapping: public BasePatternMapping {
 			}
 		}
 		
-		// Set palette of underlying pattern(s)
-		virtual void setPalette(CRGBPalette16 new_palette)	{
-			this->pattern.setPalette(new_palette);
-		};
-		
-		// Reset palette of underlying pattern(s) to one it was initialised with
-		virtual void resetPalette()	{
-			this->pattern.resetPalette();
-		};		
-		
 	protected:
-		LinearPattern& pattern;
 		StripSegment* strip_segments;
 		const uint8_t num_segments;				// Number of configured strip segments to map pattern to
 
@@ -211,12 +179,9 @@ class SpatialPatternMapping: public BasePatternMapping {
 			SpatialPattern& pattern,   					// Reference to SpatialPattern object
 			SpatialStripSegment spatial_segments[],		// Array of SpatialStripSegments to map pattern to
 			uint8_t num_segments,						// Number of SpatialStripSegments (length of spatial_segments)
-			Point offset,								// Translational offset to apply to Project coordinate system before scaling
-			Point scale_factors,						// Scaling factors to apply to Project coordinate system to map to Pattern coordinates 
-			uint16_t frame_delay=DEFAULT_FRAME_DELAY,  	// Delay between pattern frames (in ms)
-			uint16_t duration=DEFAULT_DURATION,			
-			const char* name="" 						// Name to give this pattern configuration
-		): BasePatternMapping(frame_delay, duration, name), 
+			Point offset=undefinedPoint,				// Translational offset to apply to Project coordinate system before scaling
+			Point scale_factors=undefinedPoint			// Scaling factors to apply to Project coordinate system to map to Pattern coordinates 
+		): 
 		pattern(pattern), 
 		spatial_segments(spatial_segments), 
 		num_segments(num_segments), 
@@ -237,26 +202,16 @@ class SpatialPatternMapping: public BasePatternMapping {
 			}
 		}
 
-		// Constructor with defaults
-		SpatialPatternMapping(
-			SpatialPattern& pattern,   					// Reference to SpatialPattern object
-			SpatialStripSegment spatial_segments[],		// Array of SpatialStripSegments to map pattern to
-			uint8_t num_segments,						// Number of SpatialStripSegments (length of spatial_segments)
-			uint16_t frame_delay=DEFAULT_FRAME_DELAY,  	// Delay between pattern frames (in ms)
-			uint16_t duration=DEFAULT_DURATION,			
-			const char* name="" 						// Name to give this pattern configuration
-		): SpatialPatternMapping(pattern, spatial_segments, num_segments, undefinedPoint, undefinedPoint, frame_delay, duration, name) {}
-
 		// Initialise/Reset pattern state
-		virtual void reset() override {		
+		void reset() override {		
 			BasePatternMapping::reset();
 			this->pattern.reset();
 		};
 		
 		// Excute new frame of pattern and map results to LED array
-		void newFrame(CRGB* leds)	override {
-			BasePatternMapping::newFrame(leds);
-			this->pattern.frameAction(this->frame_time);
+		void newFrame(CRGB* leds, uint16_t frame_time)	override {
+			// Run pattern frame
+			this->pattern.frameAction(frame_time);
 			// Loop through every LED (segment and segment index combination), determine spatial position and get value
 			for (uint8_t axis_id=0; axis_id < this->num_segments; axis_id++) {
 				SpatialStripSegment& spatial_segment = this->spatial_segments[axis_id];
@@ -275,12 +230,12 @@ class SpatialPatternMapping: public BasePatternMapping {
 		}
 		
 		// Set palette of underlying pattern(s)
-		virtual void setPalette(CRGBPalette16 new_palette)	{
+		void setPalette(CRGBPalette16 new_palette)	{
 			this->pattern.setPalette(new_palette);
 		};
 		
 		// Reset palette of underlying pattern(s) to one it was initialised with
-		virtual void resetPalette()	{
+		void resetPalette()	{
 			this->pattern.resetPalette();
 		};		
 		
@@ -299,7 +254,7 @@ class SpatialPatternMapping: public BasePatternMapping {
 // The start position and length of the path can be adjusted using the offset and scale parameters
 // Since the pattern pixel for an LED is determine by its distance from the start position, be default the effect will be mirrored about the start of the vector path
 // If start position is outside the bounds of the LEDs, then this will not make any difference. Otherwise, this can be disabled by setting mirrored=false (with an extra performance cost)
-class LinearToSpatialPatternMapping : public BasePatternMapping {
+class LinearToSpatialPatternMapping : public BaseLinearPatternMapping {
 	public:
 		// Constructor
 		LinearToSpatialPatternMapping (
@@ -307,14 +262,11 @@ class LinearToSpatialPatternMapping : public BasePatternMapping {
 			Point pattern_vector,						// Vector to map pattern to
 			SpatialStripSegment spatial_segments[],		// Array of SpatialStripSegments to map pattern to
 			uint8_t num_segments,						// Number of SpatialStripSegments (length of spatial_segments)
-			uint16_t frame_delay=DEFAULT_FRAME_DELAY,  	// Delay between pattern frames (in ms)
-			uint16_t duration=DEFAULT_DURATION,	
 			int16_t offset=0,							// Offset of pattern vector start position
 			float scale=1,								// Scaling factor to apply to linear pattern vector length
-			bool mirrored=true,							// Whether linear pattern is mirrored around start position on vector
-			const char* name="" 						// Name to give this pattern configuration		
-		): BasePatternMapping(frame_delay, duration, name), 	
-		pattern(pattern), 
+			bool mirrored=true							// Whether linear pattern is mirrored around start position on vector
+		): 	
+		BaseLinearPatternMapping(pattern), 
 		pattern_vector(pattern_vector), 
 		spatial_segments(spatial_segments), 
 		num_segments(num_segments), 
@@ -341,27 +293,11 @@ class LinearToSpatialPatternMapping : public BasePatternMapping {
 			// Pre-calculate pattern resolution / length constant
 			this->res_per_len = ((float) this->pattern.resolution-1.0)/this->path_length;
 		}
-
-		// Initialise/Reset pattern state
-		virtual void reset() override {
-			BasePatternMapping::reset();
-			this->pattern.reset();
-		};
-		
-		// Set palette of underlying pattern(s)
-		virtual void setPalette(CRGBPalette16 new_palette)	{
-			this->pattern.setPalette(new_palette);
-		};
-		
-		// Reset palette of underlying pattern(s) to one it was initialised with
-		virtual void resetPalette()	{
-			this->pattern.resetPalette();
-		};	
 		
 		// Excute new frame of pattern and map results to LED array
-		void newFrame(CRGB* leds)	override {
-			BasePatternMapping::newFrame(leds);			
-			this->pattern.frameAction(this->frame_time);
+		void newFrame(CRGB* leds, uint16_t frame_time)	override {
+			// Run pattern logic
+			this->pattern.frameAction(frame_time);
 			// Loop through every LED (axis and axis position combination), determine spatial position and appropriate state from pattern
 			for (uint8_t axis_id=0; axis_id < this->num_segments; axis_id++) {
 				SpatialStripSegment& spatial_axis = this->spatial_segments[axis_id];
@@ -398,7 +334,6 @@ class LinearToSpatialPatternMapping : public BasePatternMapping {
 		}
 		
 	protected:
-		LinearPattern& pattern;
 		const Point pattern_vector;   			// Vector of direction to apply linear pattern
 		SpatialStripSegment* spatial_segments;
 		const uint8_t num_segments;				// Number of configured strip segments to map pattern to
@@ -418,37 +353,34 @@ class MultiplePatternMapping : public BasePatternMapping {
 		// Constructor
 		MultiplePatternMapping(
 			BasePatternMapping** mappings,				// Array of pointers to other PatternMappings to apply
-			uint8_t num_mappings,						// Number of Pattern Mappings (length of mappings)
-			uint16_t frame_delay=DEFAULT_FRAME_DELAY,  	// Delay between pattern frames (in ms)
-			uint16_t duration=DEFAULT_DURATION,
-			const char* name="" 						// Name to give this pattern configuration
-		): BasePatternMapping(frame_delay, duration, name), mappings(mappings), num_mappings(num_mappings)	{}
+			uint8_t num_mappings						// Number of Pattern Mappings (length of mappings)
+		): 
+		mappings(mappings), 
+		num_mappings(num_mappings)	{}
 
 		// Initialise/Reset pattern state
-		virtual void reset() override {	
-			BasePatternMapping::reset();
+		void reset() override {	
 			for (uint8_t i=0; i < this->num_mappings; i++) {
 				this->mappings[i]->reset();
 			}
 		};
 		
 		// Excute new frame of all pattern mappings
-		void newFrame(CRGB* leds)	override {
-			BasePatternMapping::newFrame(leds);
+		void newFrame(CRGB* leds, uint16_t frame_time)	override {
 			for (uint8_t i=0; i < this->num_mappings; i++) {				
-				this->mappings[i]->newFrame(leds);
+				this->mappings[i]->newFrame(leds, frame_time);
 			}
 		}
 		
 		// Set palette of underlying pattern(s)
-		virtual void setPalette(CRGBPalette16 new_palette)	{
+		void setPalette(CRGBPalette16 new_palette)	override {
 			for (uint8_t i=0; i < this->num_mappings; i++) {
 				this->mappings[i]->setPalette(new_palette);
 			}
 		};
 		
 		// Reset palette of underlying pattern(s) to one it was initialised with
-		virtual void resetPalette()	{
+		void resetPalette()	override {
 			for (uint8_t i=0; i < this->num_mappings; i++) {
 				this->mappings[i]->resetPalette();
 			}

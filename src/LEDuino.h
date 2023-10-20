@@ -4,10 +4,13 @@
 #ifndef LEDuino_h
 #define  LEDuino_h
 #include <FastLED.h>
+#include "utils.h"
+#include "Point.h"
 #include "StripSegment.h"
 #include "Pattern.h"
 #include "PatternMapping.h"
-#include "utils.h"
+#include "PatternConfiguration.h"
+
 #include "pattern_examples.h"
 
 // Controller object which applies pattern LED values to appropriate axes
@@ -17,13 +20,17 @@ class PatternController {
 		PatternController(
 			CRGB* leds,											// Pointer to Array of CRGB LEDs which is registered with FastLED
 			uint16_t num_leds,									// Number of LEDS (length of leds)
-			BasePatternMapping** pattern_mappings,				// Pointer to Array of pointers to PatternMapping configurations to run
-			uint8_t num_mappings,									// Number of pattern configurations (length of pattern_mappings)
-			bool randomize=false									// Whether to randomize pattern order
-			):  leds(leds), num_leds(num_leds), pattern_mappings(pattern_mappings), num_mappings(num_mappings), randomize(randomize) {
-			// Initialise as max for immediate overflow to 0 at start
-			this->current_mapping_id = num_mappings-1;
-		}
+			PatternConfiguration* pattern_configs,				// Array of PatternConfigurations to run
+			uint8_t num_configs,								// Number of pattern configurations (length of pattern_configs)
+			bool randomize=false								// Whether to randomize pattern order
+			):  
+			leds(leds), 
+			num_leds(num_leds), 
+			pattern_configs(pattern_configs), 
+			num_configs(num_configs), 
+			randomize(randomize), 
+			current_config_id(num_configs-1) {}
+
 		void initialise() {
 			// Set initial pattern
 			this->setNewPatternMapping();
@@ -32,16 +39,16 @@ class PatternController {
 		// Run pattern newFrame() if ready, set new pattern if required
 		void loop() {
 			// Check if pattern config needs to be changed
-			if (this->current_mapping->expired() && this->auto_change_pattern)	{
+			if (this->current_config->expired() && this->auto_change_pattern)	{
 				this->setNewPatternMapping();
 			}
 			// New pattern frame
-			if (this->current_mapping->frameReady())	{		
+			if (this->current_config->frameReady())	{		
 				#ifdef LEDUINO_DEBUG		
 					long pre_frame_time = micros();
 				#endif
 				// Run pattern frame logic
-				this->current_mapping->newFrame(this->leds);
+				this->current_config->newFrame(this->leds);
 
 				#ifdef LEDUINO_DEBUG
 					long pre_show_time = micros();
@@ -60,44 +67,45 @@ class PatternController {
 			}
 		}
 		// Set current active pattern mapper by array index
-		void setPatternMapping(uint8_t mapping_id)   {
-			mapping_id = limit(mapping_id, this->num_mappings-1);
-			this->current_mapping_id = mapping_id;
-			this->current_mapping = this->pattern_mappings[mapping_id];
+		void setPatternMapping(uint8_t config_id)   {
+			config_id = limit(config_id, this->num_configs-1);
+			this->current_config_id = config_id;
+			this->current_config = &(this->pattern_configs[config_id]);
 			#ifdef LEDUINO_DEBUG
 				Serial.print("Choosing new pattern: " );
-				Serial.println(this->current_mapping->name);
+				Serial.println(this->current_config->name);
 				Serial.flush()
 			#endif
-			this->current_mapping->reset();
+			this->current_config->reset();
+			// Reset LED state
+			FastLED.clear();
+			FastLED.show();
 		}
 		
-		BasePatternMapping* current_mapping;		// Pointer to currently selected pattern
-		uint8_t current_mapping_id;
+		PatternConfiguration* current_config;		// Currently selected config
 		bool auto_change_pattern=true;				// Can be set to false to stop automatically changing pattern mapping configurations
 	private:
 
 		CRGB* leds;	
 		const uint16_t num_leds;
-		BasePatternMapping** pattern_mappings;
-		const uint8_t num_mappings;
-		const bool randomize;		
+		PatternConfiguration* pattern_configs;
+		const uint8_t num_configs;
+		const bool randomize;
 		long last_frame_time;
+		uint8_t current_config_id;
 		
 		// Set ID of new pattern configuration
 		void setNewPatternMapping() {		
 			uint8_t new_pattern_id;
 			if (this->randomize)	{
 				// Choose random pattern
-				new_pattern_id = random(0, this->num_mappings);
+				new_pattern_id = random(0, this->num_configs);
 			} else {
 				// Choose next pattern
-				new_pattern_id = (this->current_mapping_id + 1)%(this->num_mappings);
+				new_pattern_id = (this->current_config_id + 1)%(this->num_configs);
 			}
-			// Reset LED state
+
 			// TODO: Add transition between patterns?
-			FastLED.clear();  // clear all pixel data
-			FastLED.show();
 			setPatternMapping(new_pattern_id);
 		}
 };
