@@ -31,37 +31,43 @@ class PatternController {
 		
 		// Run pattern newFrame() if ready, set new pattern if required
 		void loop() {
-			static unsigned long last_frame_time;
-			unsigned long current_time;
 			// Check if pattern config needs to be changed
 			if (this->current_mapping->expired() && this->auto_change_pattern)	{
 				this->setNewPatternMapping();
 			}
 			// New pattern frame
-			if (this->current_mapping->frameReady())	{
-				current_time = micros();
-				DPRINT("Frame delay: ");
-				DPRINTLN(current_time - last_frame_time);
-				last_frame_time=current_time;
+			if (this->current_mapping->frameReady())	{		
+				#ifdef LEDUINO_DEBUG		
+					long pre_frame_time = micros();
+				#endif
 				// Run pattern frame logic
-				
-				long pre_frame_time = micros();
 				this->current_mapping->newFrame(this->leds);
-				long pre_show_time = micros();
+
+				#ifdef LEDUINO_DEBUG
+					long pre_show_time = micros();
+				#endif
 				// Show LEDs
 				FastLED.show();
-				DPRINT("Frame Time: ");
-				DPRINT(pre_show_time-pre_frame_time);
-				DPRINT(" Show time: ");
-				DPRINTLN(micros()-pre_show_time);
+
+				// Print frame logic execution time and FastLED.show() time if DEBUG is enabled
+				#ifdef LEDUINO_DEBUG
+					Serial.print("Frame Time: ");
+					Serial.print(frame_process_time);
+					Serial.print(" Show time: ");
+					Serial.println(micros()-pre_show_time);
+					Serial.flush()
+				#endif
 			}
 		}
 		// Set current active pattern mapper by array index
 		void setPatternMapping(uint8_t mapping_id)   {
 			this->current_mapping_id = mapping_id;
 			this->current_mapping = this->pattern_mappings[mapping_id];
-			DPRINT("Choosing new pattern: " );
-			DPRINTLN(this->current_mapping->name);
+			#ifdef LEDUINO_DEBUG
+				Serial.print("Choosing new pattern: " );
+				Serial.println(this->current_mapping->name);
+				Serial.flush()
+			#endif
 			this->current_mapping->reset();
 		}
 		

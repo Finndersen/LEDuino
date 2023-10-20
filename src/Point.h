@@ -64,8 +64,6 @@ class Point: public Printable {
 		};
 		template<typename T>
 		Point& operator/=(const T RHS) { 
-			//DPRINT("Diving by: ");
-			//DPRINTLN(RHS);
 			this->x /= RHS; 
 			this->y /= RHS; 
 			this->z /= RHS; 

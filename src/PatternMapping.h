@@ -28,8 +28,11 @@ class BasePatternMapping {
 		
 		// Initialise/Reset pattern state
 		virtual void reset() {		
-			DPRINT("Initialising pattern: ");
-			DPRINTLN(this->name);
+			#ifdef LEDUINO_DEBUG
+				Serial.print("Initialising pattern: ");
+				Serial.println(this->name);
+				Serial.flush()
+			#endif
 			this->start_time = millis();
 			this->frame_time = 0;
 		};
@@ -232,28 +235,17 @@ class SpatialPatternMapping: public BasePatternMapping {
 		void newFrame(CRGB* leds)	override {
 			BasePatternMapping::newFrame(leds);
 			this->pattern.frameAction(this->frame_time);
-			//DPRINT("Scale Factors");
-			//DPRINTLN(this->scale_factors);
 			// Loop through every LED (segment and segment index combination), determine spatial position and get value
 			for (uint8_t axis_id=0; axis_id < this->num_segments; axis_id++) {
 				SpatialStripSegment& spatial_segment = this->spatial_segments[axis_id];
-				//DPRINT("Axis Vector");
-				//DPRINTLN(axis.end_pos - axis.start_pos);
 				// Loop through all positions on axis
 				for (uint16_t segment_pos=0; segment_pos < spatial_segment.strip_segment.segment_len; segment_pos++) {
 					// Get position from spatial axis
 					Point pos = spatial_segment.getSpatialPosition(segment_pos);
-					//DPRINT("Step");
-					//DPRINTLN(axis.step);
-
-					//DPRINT("LED Pos");
-					//DPRINTLN(pos);
 					// Get LED ID from strip segment
 					uint16_t led_id = spatial_segment.strip_segment.getLEDId(segment_pos);
 					// Translate spatial position to pattern coordinates
 					Point pattern_pos = ((pos - this->offset)).hadamard_product(this->scale_factors);
-					//DPRINT("Pattern Pos");
-					//DPRINTLN(pattern_pos);
 					// Get value from pattern
 					leds[led_id] = this->pattern.getPixelValue(pattern_pos);
 				}
@@ -347,17 +339,6 @@ class LinearToSpatialPatternMapping : public BasePatternMapping {
 		
 		// Excute new frame of pattern and map results to LED array
 		void newFrame(CRGB* leds)	override {
-			/*
-			DPRINT("Start Pos");
-			DPRINTLN(this->path_start_pos);
-			DPRINT("End Pos");
-			DPRINTLN(this->path_end_pos);
-			DPRINT("Length");
-			DPRINTLN(this->path_length);
-			DPRINT("Vector");
-			DPRINTLN(this->pattern_vector);
-			*/
-			
 			BasePatternMapping::newFrame(leds);			
 			this->pattern.frameAction(this->frame_time);
 			// Loop through every LED (axis and axis position combination), determine spatial position and appropriate state from pattern
@@ -369,19 +350,14 @@ class LinearToSpatialPatternMapping : public BasePatternMapping {
 					uint16_t led_id = spatial_axis.strip_segment.getLEDId(segment_pos);
 					// Get spatial position of LED
 					Point led_pos = spatial_axis.getSpatialPosition(segment_pos);
-					//DPRINT("LED Pos");
-					//DPRINTLN(led_pos);
 					// If mirroring is not enabled, need check if LED pos is in pattern_vector direction from start_pos
 					if (!this->mirrored) {
-						//Point rel_pos = led_pos - this->path_start_pos;
 						// Get projected LED position on pattern path
 						Point pos_on_path = led_pos.hadamard_product(this->pattern_vector) * this->inv_pattern_vect_norm;
-						//((rel_pos.x*this->pattern_vector.x < 0) || (rel_pos.y*this->pattern_vector.y < 0) || (rel_pos.z*this->pattern_vector.z < 0))
 						if (!between(pos_on_path.x, this->path_start_pos.x, this->path_end_pos.x) || 
 							!between(pos_on_path.y, this->path_start_pos.y, this->path_end_pos.y) || 
 							!between(pos_on_path.y, this->path_start_pos.z, this->path_end_pos.z)) {
 							leds[led_id] = CRGB::Black;
-							//DPRINTLN("Point is outside pattern path range");
 							continue;
 						}
 					}

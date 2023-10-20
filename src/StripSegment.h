@@ -2,11 +2,9 @@
 #define  STRIPSEGMENT_H
 #include "Point.h"
 #include "utils.h"
-// #include "Array.h"
-/*
- * Class to define an StripSegment which corresponds to a sub-section of an LED Strip.  
- * Specify starting offset and lenth of segment. Allows extending over LED strip limits (wrap around from end back to start)
- */
+
+//Class to define an StripSegment which corresponds to a sub-section of an LED Strip.  
+//Specify starting offset and lenth of segment. Allows extending over LED strip limits (wrap around from end back to start)
 class StripSegment {
 	public:
 		// Constructor
@@ -119,17 +117,6 @@ class SpatialStripSegment : public SpatialStripSegmentInterface {
 			return this->led_positions[segment_pos];
 		}
 		
-		// Negation operator overloading to get reverse version of axis
-		// New axis will cover the same set of LEDs, new start_pos will be old end_pos, and direction reversed
-		// SpatialStripSegment operator-()	{
-		// 	// Reverse start and end position
-		// 	return SpatialStripSegment(-(this->strip_segment), this->end_pos, this->start_pos);
-		// }
-		
-		// ~SpatialStripSegment() {
-		// 	DPRINT("DECONSTRUCT");
-		// 	//delete [] this->led_positions;
-		// }
 	protected:
 		Point* led_positions; 	// Array of coordinate positions of each LED in strip segment
 };
