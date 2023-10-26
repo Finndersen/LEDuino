@@ -9,27 +9,28 @@
 #include "StripSegment.h"
 #include "Pattern.h"
 #include "PatternMapping.h"
-#include "PatternConfiguration.h"
+#include "MappingRunner.h"
 
 #include "pattern_examples.h"
 
-// Controller object which applies pattern LED values to appropriate axes
-class PatternController {
+// Controller object which manages a collection of MappingRunners
+// Chooses which mapping to run, and handles running it at the desired framerate
+class LEDuinoController {
 	public:
 		//Constructor
-		PatternController(
-			CRGB* leds,											// Pointer to Array of CRGB LEDs which is registered with FastLED
-			uint16_t num_leds,									// Number of LEDS (length of leds)
-			PatternConfiguration* pattern_configs,				// Array of PatternConfigurations to run
-			uint8_t num_configs,								// Number of pattern configurations (length of pattern_configs)
-			bool randomize=false								// Whether to randomize pattern order
+		LEDuinoController(
+			CRGB* leds,									// Pointer to Array of CRGB LEDs which is registered with FastLED
+			uint16_t num_leds,							// Number of LEDS (length of leds)
+			MappingRunner* mapping_runners,				// Array of PatternConfigurations to run
+			uint8_t num_mappings,						// Number of pattern configurations (length of mapping_runners)
+			bool randomize=false						// Whether to randomize pattern order
 			):  
 			leds(leds), 
 			num_leds(num_leds), 
-			pattern_configs(pattern_configs), 
-			num_configs(num_configs), 
+			mapping_runners(mapping_runners), 
+			num_mappings(num_mappings), 
 			randomize(randomize), 
-			current_config_id(num_configs-1) {}
+			current_runner_id(num_mappings-1) {}
 
 		void initialise() {
 			// Set initial pattern
@@ -39,16 +40,16 @@ class PatternController {
 		// Run pattern newFrame() if ready, set new pattern if required
 		void loop() {
 			// Check if pattern config needs to be changed
-			if (this->current_config->expired() && this->auto_change_pattern)	{
+			if (this->current_runner->expired() && this->auto_change_pattern)	{
 				this->setNewPatternMapping();
 			}
 			// New pattern frame
-			if (this->current_config->frameReady())	{		
+			if (this->current_runner->frameReady())	{		
 				#ifdef LEDUINO_DEBUG		
 					long pre_frame_time = micros();
 				#endif
 				// Run pattern frame logic
-				this->current_config->newFrame(this->leds);
+				this->current_runner->newFrame(this->leds);
 
 				#ifdef LEDUINO_DEBUG
 					long pre_show_time = micros();
@@ -67,42 +68,42 @@ class PatternController {
 			}
 		}
 		// Set current active pattern mapper by array index
-		void setPatternMapping(uint8_t config_id)   {
-			config_id = limit(config_id, this->num_configs-1);
-			this->current_config_id = config_id;
-			this->current_config = &(this->pattern_configs[config_id]);
+		void setPatternMapping(uint8_t runner_id)   {
+			runner_id = limit(runner_id, this->num_mappings-1);
+			this->current_runner_id = runner_id;
+			this->current_runner = &(this->mapping_runners[runner_id]);
 			#ifdef LEDUINO_DEBUG
 				Serial.print("Choosing new pattern: " );
-				Serial.println(this->current_config->name);
+				Serial.println(this->current_runner->name);
 				Serial.flush()
 			#endif
-			this->current_config->reset();
+			this->current_runner->reset();
 			// Reset LED state
 			FastLED.clear();
 			FastLED.show();
 		}
 		
-		PatternConfiguration* current_config;		// Currently selected config
-		bool auto_change_pattern=true;				// Can be set to false to stop automatically changing pattern mapping configurations
+		MappingRunner* current_runner;		// Currently selected mapping runner
+		bool auto_change_pattern=true;		// Can be set to false to stop automatically changing pattern mapping configurations
 	private:
 
 		CRGB* leds;	
 		const uint16_t num_leds;
-		PatternConfiguration* pattern_configs;
-		const uint8_t num_configs;
+		MappingRunner* mapping_runners;
+		const uint8_t num_mappings;
 		const bool randomize;
 		long last_frame_time;
-		uint8_t current_config_id;
+		uint8_t current_runner_id;
 		
 		// Set ID of new pattern configuration
 		void setNewPatternMapping() {		
 			uint8_t new_pattern_id;
 			if (this->randomize)	{
 				// Choose random pattern
-				new_pattern_id = random(0, this->num_configs);
+				new_pattern_id = random(0, this->num_mappings);
 			} else {
 				// Choose next pattern
-				new_pattern_id = (this->current_config_id + 1)%(this->num_configs);
+				new_pattern_id = (this->current_runner_id + 1)%(this->num_mappings);
 			}
 
 			// TODO: Add transition between patterns?

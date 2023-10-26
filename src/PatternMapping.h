@@ -9,173 +9,190 @@
 
 // Base interface class for defining a mapping of a pattern to some kind of configuration of LEDS
 // E.g. a linear segment (single axis) or 2D/3D spatial array of LEDs composed of multiple axes
-class BasePatternMapping {
+class BasePatternMapper {
 	public:
 		// Initialise/Reset pattern state
-		virtual void reset() {};
+		virtual void reset() const {};
 
 		// Excute new frame of pattern and map results to LED array
-		virtual void newFrame(CRGB* leds, uint16_t frame_time) = 0;
+		virtual void newFrame(CRGB* leds, uint16_t frame_time) const = 0;
 		
 		// Set palette of underlying pattern(s)
-		virtual void setPalette(CRGBPalette16 new_palette)	{};
+		virtual void setPalette(CRGBPalette16 new_palette) const = 0;
 		
 		// Reset palette of underlying pattern(s) to one it was initialised with
-		virtual void resetPalette()	{};
+		virtual void resetPalette()	const = 0;
 
 };
 
 // Base class for Mappings that use a LinearPattern
-class BaseLinearPatternMapping: public BasePatternMapping {
+class BaseLinearPatternMapper: public BasePatternMapper {
 	public:
-		BaseLinearPatternMapping(
-			LinearPattern& pattern   					// LinearPattern object
-		): pattern(pattern) {}
+		BaseLinearPatternMapper(
+			LinearPattern& pattern,   	// LinearPattern object
+			CRGB* pixel_data,			// Pixel array for LinearPattern to mutate (length equal to num_pixels)
+			uint16_t num_pixels		// Number of pixels for linear pattern to use (pattern resolution)
+		): 
+		pattern(pattern),
+		pixel_data(pixel_data),
+		num_pixels(num_pixels) {}
 
 		// Initialise/Reset pattern state
-		void reset() override {
+		void reset() const override {
+			fill_solid(this->pixel_data, this->num_pixels, CRGB::Black);
 			this->pattern.reset();
 		};
 
 		// Set palette of underlying pattern(s)
-		void setPalette(CRGBPalette16 new_palette) override	{
+		void setPalette(CRGBPalette16 new_palette) const override	{
 			this->pattern.setPalette(new_palette);
 		};
 		
 		// Reset palette of underlying pattern(s) to one it was initialised with
-		void resetPalette()	override {
+		void resetPalette()	const override {
 			this->pattern.resetPalette();
-		};		
+		};
 		
 	protected:
 		LinearPattern& pattern;
+		CRGB* pixel_data;
+		const uint16_t num_pixels;
+		
 };
 
-// Defines a mapping of a LinearPattern to a collection of LED Strip Segments
+// Handles the mapping of a LinearPattern to a collection of LED Strip Segments
 // The pattern will be interpolated to the length of each strip segment
-class LinearPatternMapping: public BaseLinearPatternMapping {
+class LinearPatternMapper: public BaseLinearPatternMapper {
 	public:
 		// Constructor
-		LinearPatternMapping(
-			LinearPattern& pattern,   					// LinearPattern object
-			StripSegment* strip_segments,				// Array of StripSegments to map pattern to
-			uint8_t num_segments						// Number of axes (length of strip_segments)
+		LinearPatternMapper(
+			LinearPattern& pattern,   				// LinearPattern to map to segments
+			CRGB* pixel_data,						// Pixel array for LinearPattern to mutate (length equal to num_pixels)
+			uint16_t num_pixels,					// Number of pixels for linear pattern to use (pattern resolution)
+			StripSegment* strip_segments,			// Array of StripSegments to map pattern to
+			uint8_t num_segments					// Number of axes (length of strip_segments)
 		): 
-		BaseLinearPatternMapping(pattern), 
+		BaseLinearPatternMapper(pattern, pixel_data, num_pixels), 
 		strip_segments(strip_segments), 
 		num_segments(num_segments) {}
-
-
 		
 		// Excute new frame of pattern and map results to LED array
 		// This implementation involves calling pattern.getPixelValue() multiple times for the same pattern pixel index which is inefficient
 		// Alternatively, it could be called once for every index and the results stored in an array which can be re-used
 		// The two approaches are a trade-off between memory and CPU usage, but generally for linear patterns CPU is not a bottleneck,
 		// and LinearStatePatterns have their own pixel array anyway and can be used if required
-		void newFrame(CRGB* leds, uint16_t frame_time)	override {
+		void newFrame(CRGB* leds, uint16_t frame_time)	const override {
 			// Run pattern logic
-			this->pattern.frameAction(frame_time);			
-			uint16_t pat_len = this->pattern.resolution;
+			this->pattern.frameAction(this->pixel_data, this->num_pixels, frame_time);			
+			uint16_t pat_len = this->num_pixels;
 			// Map pattern to all registered strip segments (will be scaled to each segment length)
 			for (uint8_t seg_id=0; seg_id < this->num_segments; seg_id++) {
 				StripSegment& strip_segment = this->strip_segments[seg_id];
-				uint16_t seg_len = strip_segment.segment_len;
-				// For caching previous LED value
-				uint16_t prev_pat_ind = 65535; 
-				CRGB led_val = CRGB(0, 0, 0);
-				CRGB prev_led_val = CRGB(0, 0, 0);
 
-				for (uint16_t led_seg_ind=0; led_seg_ind<seg_len; led_seg_ind++) 	{		
-					// Get LED strip index for LED 
-					uint16_t led_strip_ind = strip_segment.getLEDId(led_seg_ind);
-
-					if (seg_len == pat_len) {
-						// Segment length is equal to pattern pixel resolution, no need to downsample
-						leds[led_strip_ind] = this->pattern.getPixelValue(led_seg_ind);
-					} else {
-						// Perform downsampling of pattern data to strip segment. 
-						// Basically trying to scale pattern of length pat_len onto LED segment of length seg_len
-						// The value of each actual LED will be derived from a weighted average of values from a range of virtual pattern pixels
-						// To represent weights using integers (for efficiency), each pattern pixel will be weighted as a fraction of segment length seg_len (for convenience),
-						// Therefore a weight value of 'seg_len' corresponds to weighting of 1 for that pattern pixel
-						// The sum of weights of all pattern pixels for a strip segment LED is equal to pat_len (pattern length)
-						// Get index of first pattern virtual pixel to downsample for current LED
-						uint16_t start_index = (led_seg_ind*pat_len)/seg_len;
-						// Weighting to use on first pattern pixel 
-						uint16_t first_weight = seg_len - (led_seg_ind*pat_len - start_index*seg_len);
-						uint16_t remaining_weight = pat_len;
-						// Cumulative RGB colour values 
-						uint16_t r = 0, g = 0, b = 0;
-						// Add weighted values to colour components from pattern state
-						uint16_t pat_ind = start_index;
-						do {
-							// If pat_len is not an integer multiple of seg_len, then first pat_ind for an LED will be equal to the last pat_ind of the previous LED
-							if (pat_ind == prev_pat_ind) {
-								led_val = prev_led_val;
-							} else {
-								led_val = this->pattern.getPixelValue(pat_ind);
-							}
-							uint16_t weight;
-							if (pat_ind == start_index) {
-								weight = first_weight;
-							} else if (remaining_weight > seg_len) {
-								weight = seg_len;
-							} else {
-								weight = remaining_weight;
-							}
-							r += weight*led_val.red;
-							g += weight*led_val.green;
-							b += weight*led_val.blue;
-							prev_pat_ind = pat_ind;
-							prev_led_val = led_val;
-							pat_ind += 1;
-							remaining_weight -= weight;
-							
-						} while (remaining_weight>0);
-
-						// Assign downsampled pixel value					
-						leds[led_strip_ind] = CRGB(r/pat_len, g/pat_len, b/pat_len);
-					}
-				}				
+				if (strip_segment.segment_len == pat_len) {
+					// When segment length is equal to pattern pixel resolution, no need to downsample.
+					interpolate_equal_length(leds, strip_segment);
+				} else if (pat_len % strip_segment.segment_len == 0) {
+					// Optimisation for when pattern length is an integer multiple of the segment length
+					interpolate_integer_multiple_length(leds, strip_segment);
+				} else {
+					// General case of interpolating arbitrary length pattern data (resolution) to strip segment
+					interpolate_arbitrary_length(leds, strip_segment);
+				}			
 			}
 		}
 		
 	protected:
+		// Interpolate pattern pixel data to the provided strip segment, when pattern length (resolution) is equal to segment length
+		void interpolate_equal_length(CRGB* leds, StripSegment& strip_segment) const {
+			for (uint16_t led_seg_ind=0; led_seg_ind<strip_segment.segment_len; led_seg_ind++) 	{		
+				// Get LED strip index for LED 
+				uint16_t led_strip_ind = strip_segment.getLEDId(led_seg_ind);				
+				// Can translate directly from virtual pixels to segment LED
+				leds[led_strip_ind] = this->pixel_data[led_seg_ind];
+			}
+		};
+
+		// Interpolate pattern pixel data to the provided strip segment, when pattern length (resolution) is an integer multiple of segment length
+		void interpolate_integer_multiple_length(CRGB* leds, StripSegment& strip_segment) const {
+			uint8_t scale_factor = this->num_pixels / strip_segment.segment_len;
+			for (uint16_t led_seg_ind=0; led_seg_ind<strip_segment.segment_len; led_seg_ind++) 	{		
+				// Get LED strip index for LED 
+				uint16_t led_strip_ind = strip_segment.getLEDId(led_seg_ind);	
+				// Sum RGB values over all pattern pixels for the segment LED, then divide by count to get average
+				uint16_t r = 0, g = 0, b = 0;
+				uint16_t start_pixel_id = scale_factor*led_seg_ind;
+				for (uint16_t pixel_id = start_pixel_id; pixel_id < start_pixel_id + scale_factor; pixel_id++)	{
+					CRGB led_val = this->pixel_data[pixel_id];
+					r += led_val.red;
+					g += led_val.green;
+					b += led_val.blue;
+				};
+				
+				leds[led_strip_ind] = CRGB(r/scale_factor, g/scale_factor, b/scale_factor);
+			}
+		};
+
+		// Interpolate pattern pixel data to the provided strip segment, for an arbitrary pattern length (resolution)
+		void interpolate_arbitrary_length(CRGB* leds, StripSegment& strip_segment) const	{
+			uint16_t seg_len = strip_segment.segment_len;
+			uint16_t pat_len = this->num_pixels;
+			for (uint16_t led_seg_ind=0; led_seg_ind<strip_segment.segment_len; led_seg_ind++) 	{		
+				// Get LED strip index for LED 
+				uint16_t led_strip_ind = strip_segment.getLEDId(led_seg_ind);
+				// Perform downsampling of pattern data of any resolution to strip segment. 
+				// Basically trying to scale pattern of length pat_len onto LED segment of length seg_len
+				// The value of each actual LED will be derived from a weighted average of values from a range of virtual pattern pixels
+				// To represent weights using integers (for efficiency), each pattern pixel will be weighted as a fraction of segment length seg_len (for convenience),
+				// Therefore a weight value of 'seg_len' corresponds to weighting of 1 for that pattern pixel
+				// The sum of weights of all pattern pixels for a strip segment LED is equal to pat_len (pattern length)
+				// Get index of first pattern virtual pixel to downsample for current LED
+				uint16_t start_index = (led_seg_ind*pat_len)/seg_len;
+				// Weighting to use on first pattern pixel 
+				uint16_t first_weight = seg_len - (led_seg_ind*pat_len - start_index*seg_len);
+				uint16_t remaining_weight = pat_len;
+				// Cumulative RGB colour values 
+				uint16_t r = 0, g = 0, b = 0;
+				// Add weighted values to colour components from pattern state
+				uint16_t pat_ind = start_index;
+				do {
+					CRGB led_val = this->pixel_data[pat_ind];
+					uint16_t weight;
+					if (pat_ind == start_index) {
+						weight = first_weight;
+					} else if (remaining_weight > seg_len) {
+						weight = seg_len;
+					} else {
+						weight = remaining_weight;
+					}
+					r += weight*led_val.red;
+					g += weight*led_val.green;
+					b += weight*led_val.blue;
+					pat_ind += 1;
+					remaining_weight -= weight;
+					
+				} while (remaining_weight>0);
+
+				// Assign downsampled pixel value					
+				leds[led_strip_ind] = CRGB(r/pat_len, g/pat_len, b/pat_len);
+			}
+		};
+
 		StripSegment* strip_segments;
 		const uint8_t num_segments;				// Number of configured strip segments to map pattern to
 
 };
 
 
-// Get the bounding box of a collection of Spatial Segments
-Bounds get_spatial_segment_bounds(SpatialStripSegment spatial_segments[], uint16_t num_segments) {
-	Point global_max(FLT_MIN, FLT_MIN, FLT_MIN);
-	Point global_min(FLT_MAX, FLT_MAX, FLT_MAX);
-	
-	for (uint16_t i=0; i<num_segments; i++) {
-		SpatialStripSegment& spatial_segment = spatial_segments[i];
-		Bounds segment_bounds = spatial_segment.get_bounds();
-		// Update minimums
-		if (segment_bounds.min.x < global_min.x) 	global_min.x = segment_bounds.min.x;
-		if (segment_bounds.min.y < global_min.y) 	global_min.y = segment_bounds.min.y;
-		if (segment_bounds.min.z < global_min.z) 	global_min.z = segment_bounds.min.z;
-
-		if (segment_bounds.max.x > global_max.x) 	global_max.x = segment_bounds.max.x;
-		if (segment_bounds.max.y > global_max.y) 	global_max.y = segment_bounds.max.y;
-		if (segment_bounds.max.z > global_max.z) 	global_max.z = segment_bounds.max.z;
-	}
-	return Bounds(global_min, global_max);
-}
-
-// Class for defininig mapping configuration of 3DPattern to set of segments with spatial positioning
+// Class for handling the mapping of a 3DPattern to set of segments with spatial positioning
 // The SpatialPattern has its own coordinate system (bounds of +/- resolution on each axis),
 // and there is also the physical project coordinate system (the spatial positions of LEDS as defined in SpatialStripSegments)
 // The 'scale' and 'offset' vectors are used to map the pattern coordinate system to project space
 // If not specified, scale is calcualted automatically based on bounds of SpatialStripSegment, and offset is equal to project centroid
-class SpatialPatternMapping: public BasePatternMapping {
+class SpatialPatternMapper: public BasePatternMapper {
 	public:
 		// Constructor
-		SpatialPatternMapping(
+		SpatialPatternMapper(
 			SpatialPattern& pattern,   					// Reference to SpatialPattern object
 			SpatialStripSegment spatial_segments[],		// Array of SpatialStripSegments to map pattern to
 			uint8_t num_segments,						// Number of SpatialStripSegments (length of spatial_segments)
@@ -203,18 +220,18 @@ class SpatialPatternMapping: public BasePatternMapping {
 		}
 
 		// Initialise/Reset pattern state
-		void reset() override {		
-			BasePatternMapping::reset();
+		void reset() const override {		
+			BasePatternMapper::reset();
 			this->pattern.reset();
 		};
 		
 		// Excute new frame of pattern and map results to LED array
-		void newFrame(CRGB* leds, uint16_t frame_time)	override {
-			// Run pattern frame
+		void newFrame(CRGB* leds, uint16_t frame_time) const override {
+			// Run pattern frame logic
 			this->pattern.frameAction(frame_time);
 			// Loop through every LED (segment and segment index combination), determine spatial position and get value
-			for (uint8_t axis_id=0; axis_id < this->num_segments; axis_id++) {
-				SpatialStripSegment& spatial_segment = this->spatial_segments[axis_id];
+			for (uint8_t segment_id=0; segment_id < this->num_segments; segment_id++) {
+				SpatialStripSegment& spatial_segment = this->spatial_segments[segment_id];
 				// Loop through all positions on axis
 				for (uint16_t segment_pos=0; segment_pos < spatial_segment.strip_segment.segment_len; segment_pos++) {
 					// Get position from spatial axis
@@ -223,19 +240,19 @@ class SpatialPatternMapping: public BasePatternMapping {
 					uint16_t led_id = spatial_segment.strip_segment.getLEDId(segment_pos);
 					// Translate spatial position to pattern coordinates
 					Point pattern_pos = ((pos - this->offset)).hadamard_product(this->scale_factors);
-					// Get value from pattern
+					// Get and assign LED value from pattern
 					leds[led_id] = this->pattern.getPixelValue(pattern_pos);
 				}
 			}
 		}
 		
 		// Set palette of underlying pattern(s)
-		void setPalette(CRGBPalette16 new_palette)	{
+		void setPalette(CRGBPalette16 new_palette) const override 	{
 			this->pattern.setPalette(new_palette);
 		};
 		
 		// Reset palette of underlying pattern(s) to one it was initialised with
-		void resetPalette()	{
+		void resetPalette()	const override {
 			this->pattern.resetPalette();
 		};		
 		
@@ -254,19 +271,21 @@ class SpatialPatternMapping: public BasePatternMapping {
 // The start position and length of the path can be adjusted using the offset and scale parameters
 // Since the pattern pixel for an LED is determine by its distance from the start position, be default the effect will be mirrored about the start of the vector path
 // If start position is outside the bounds of the LEDs, then this will not make any difference. Otherwise, this can be disabled by setting mirrored=false (with an extra performance cost)
-class LinearToSpatialPatternMapping : public BaseLinearPatternMapping {
+class LinearToSpatialPatternMapper : public BaseLinearPatternMapper {
 	public:
 		// Constructor
-		LinearToSpatialPatternMapping (
+		LinearToSpatialPatternMapper (
 			LinearPattern& pattern,   					// LinearPattern object
-			Point pattern_vector,						// Vector to map pattern to
+			CRGB* pixel_data,							// Pixel array for LinearPattern to mutate (length equal to pattern resolution)
+			uint16_t num_pixels,						// Number of pixels for linear pattern to use (pattern resolution)
+			Point pattern_vector,						// Direction vector to map pattern to
 			SpatialStripSegment spatial_segments[],		// Array of SpatialStripSegments to map pattern to
 			uint8_t num_segments,						// Number of SpatialStripSegments (length of spatial_segments)
 			int16_t offset=0,							// Offset of pattern vector start position
 			float scale=1,								// Scaling factor to apply to linear pattern vector length
 			bool mirrored=true							// Whether linear pattern is mirrored around start position on vector
 		): 	
-		BaseLinearPatternMapping(pattern), 
+		BaseLinearPatternMapper(pattern, pixel_data, num_pixels), 
 		pattern_vector(pattern_vector), 
 		spatial_segments(spatial_segments), 
 		num_segments(num_segments), 
@@ -291,16 +310,16 @@ class LinearToSpatialPatternMapping : public BaseLinearPatternMapping {
 			// Pre-calculate inverse of pattern vector norm
 			this->inv_pattern_vect_norm = 1/vector_len;
 			// Pre-calculate pattern resolution / length constant
-			this->res_per_len = ((float) this->pattern.resolution-1.0)/this->path_length;
+			this->res_per_len = ((float) this->num_pixels-1.0)/this->path_length;
 		}
 		
 		// Excute new frame of pattern and map results to LED array
-		void newFrame(CRGB* leds, uint16_t frame_time)	override {
+		void newFrame(CRGB* leds, uint16_t frame_time) const override {
 			// Run pattern logic
-			this->pattern.frameAction(frame_time);
+			this->pattern.frameAction(this->pixel_data, this->num_pixels, frame_time);
 			// Loop through every LED (axis and axis position combination), determine spatial position and appropriate state from pattern
-			for (uint8_t axis_id=0; axis_id < this->num_segments; axis_id++) {
-				SpatialStripSegment& spatial_axis = this->spatial_segments[axis_id];
+			for (uint8_t segment_id=0; segment_id < this->num_segments; segment_id++) {
+				SpatialStripSegment& spatial_axis = this->spatial_segments[segment_id];
 				// Loop through all positions on segment
 				for (uint16_t segment_pos=0; segment_pos<spatial_axis.strip_segment.segment_len; segment_pos++) {
 					// Get global LED ID from strip segment
@@ -327,7 +346,7 @@ class LinearToSpatialPatternMapping : public BaseLinearPatternMapping {
 						// Get pattern value at same proportional position along pattern axis
 						// For now just round to nearest, could do interpolation between two
 						uint16_t pattern_axis_pos = round(dist_from_start*this->res_per_len);
-						leds[led_id] = this->pattern.getPixelValue(pattern_axis_pos);
+						leds[led_id] = this->pixel_data[pattern_axis_pos];
 					}
 				}
 			}
@@ -345,48 +364,48 @@ class LinearToSpatialPatternMapping : public BaseLinearPatternMapping {
 };
 
 // Allows for multiple pattern mappings to be applied at the same time
-// Can have multiple LinearPatternMapping or SpatialPatternMappings running concurrently on different parts of the same strip of LEDS
+// Can have multiple LinearPatternMapper or SpatialPatternMappings running concurrently on different parts of the same strip of LEDS
 // Will run the new frame logic of all included patterns, so could be CPU intensive and cause lag
 // Need to specify a global frame_delay which will override that of the included PatternMappings
-class MultiplePatternMapping : public BasePatternMapping {
+class MultiplePatternMapper : public BasePatternMapper {
 	public:
 		// Constructor
-		MultiplePatternMapping(
-			BasePatternMapping** mappings,				// Array of pointers to other PatternMappings to apply
+		MultiplePatternMapper(
+			BasePatternMapper** mappings,				// Array of pointers to other PatternMappings to apply
 			uint8_t num_mappings						// Number of Pattern Mappings (length of mappings)
 		): 
 		mappings(mappings), 
 		num_mappings(num_mappings)	{}
 
 		// Initialise/Reset pattern state
-		void reset() override {	
+		void reset() const override {	
 			for (uint8_t i=0; i < this->num_mappings; i++) {
 				this->mappings[i]->reset();
 			}
 		};
 		
 		// Excute new frame of all pattern mappings
-		void newFrame(CRGB* leds, uint16_t frame_time)	override {
+		void newFrame(CRGB* leds, uint16_t frame_time) const override {
 			for (uint8_t i=0; i < this->num_mappings; i++) {				
 				this->mappings[i]->newFrame(leds, frame_time);
 			}
 		}
 		
 		// Set palette of underlying pattern(s)
-		void setPalette(CRGBPalette16 new_palette)	override {
+		void setPalette(CRGBPalette16 new_palette) const override {
 			for (uint8_t i=0; i < this->num_mappings; i++) {
 				this->mappings[i]->setPalette(new_palette);
 			}
 		};
 		
 		// Reset palette of underlying pattern(s) to one it was initialised with
-		void resetPalette()	override {
+		void resetPalette() const	override {
 			for (uint8_t i=0; i < this->num_mappings; i++) {
 				this->mappings[i]->resetPalette();
 			}
 		};
 	protected:
-		BasePatternMapping** mappings;
+		BasePatternMapper** mappings;
 		const uint8_t num_mappings;
 };
 #endif

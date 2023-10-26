@@ -73,7 +73,7 @@ class SpatialStripSegmentInterface 	{
 
 };
 
-// Class to define spatial positioning of a strip segment for use with a SpatialPatternMapping
+// Class to define spatial positioning of a strip segment for use with a SpatialPatternMapper
 // Provide a StripSegment along with an array of Points which define the positions of each LED in the segment
 // If the segment is straight and LEDs are evenly spaced, can initialise with the start and end positions of the segment 
 // and the coordinates for each LED will be automatically calculated.
@@ -116,5 +116,25 @@ class SpatialStripSegment : public SpatialStripSegmentInterface {
 	protected:
 		Point* led_positions; 	// Array of coordinate positions of each LED in strip segment
 };
+
+// Get the bounding box of a collection of Spatial Segments
+Bounds get_spatial_segment_bounds(SpatialStripSegment spatial_segments[], uint16_t num_segments) {
+	Point global_max(FLT_MIN, FLT_MIN, FLT_MIN);
+	Point global_min(FLT_MAX, FLT_MAX, FLT_MAX);
+	
+	for (uint16_t i=0; i<num_segments; i++) {
+		SpatialStripSegment& spatial_segment = spatial_segments[i];
+		Bounds segment_bounds = spatial_segment.get_bounds();
+		// Update minimums
+		if (segment_bounds.min.x < global_min.x) 	global_min.x = segment_bounds.min.x;
+		if (segment_bounds.min.y < global_min.y) 	global_min.y = segment_bounds.min.y;
+		if (segment_bounds.min.z < global_min.z) 	global_min.z = segment_bounds.min.z;
+
+		if (segment_bounds.max.x > global_max.x) 	global_max.x = segment_bounds.max.x;
+		if (segment_bounds.max.y > global_max.y) 	global_max.y = segment_bounds.max.y;
+		if (segment_bounds.max.z > global_max.z) 	global_max.z = segment_bounds.max.z;
+	}
+	return Bounds(global_min, global_max);
+}
 
 #endif

@@ -2,44 +2,36 @@
 #include "Pattern.h"
 
 // Simple moving pulse of light along axis. Pulse has a bright head with a tapering tail
-// LinearStatePattern is used for performance when mapped to many segments (only need to calculate LED values once per frame)
-template<uint16_t t_resolution> 
-class MovingPulse: public LinearStatePattern<t_resolution>   {
+class MovingPulse: public LinearPattern   {
   public:
     MovingPulse(
 		uint8_t pulse_len=3, 	// Length of pulse 
-		uint8_t speed=4, 		// Number of virtual pixels to move each step
 		CRGBPalette16 colour_palette = RainbowColors_p):
-      LinearStatePattern<t_resolution>(colour_palette), 
+      LinearPattern(colour_palette), 
 	  head_pos(0), 
 	  pulse_len(pulse_len), 	
-	  speed(speed), 
 	  tail_interpolator(Interpolator(0, 255, pulse_len + 1, 0))  {}
 
     // Update pulse position (on virtual axis)
-    void frameAction(uint32_t frame_time)  override {
-      this->head_pos = (this->head_pos + this->speed) % this->resolution;
-	  for (uint16_t i=0; i<this->resolution; i++) {
-		  this->pattern_state[i] = this->get_pos_value(i);
+    void frameAction(CRGB* pixel_data, uint16_t num_pixels, uint32_t frame_time)  override {
+      this->head_pos = (this->head_pos + 1) % num_pixels;
+	  for (uint16_t i=0; i<num_pixels; i++) {
+		  pixel_data[i] = this->get_pixel_value(num_pixels, i);
 	  }
     }
 
     // Construct pulse from head position
 	// i is from 0 -> resolution
-    CRGB get_pos_value(uint16_t i) {
+    CRGB get_pixel_value(uint16_t num_pixels, uint16_t i) {
 		// Figure out distance behind pulse head to get brightness
 		int distance_behind_head = this->head_pos - i;
-		// Case of when position is in front of pulse head so distance_behind_head is negative
-		if (distance_behind_head < 0)	{
-			distance_behind_head = this->resolution + distance_behind_head;
-		}
-		// If not within pulse width, return black
-		if (distance_behind_head > this->pulse_len)	{
+		// If in front of pulse head or not within pulse width, return black
+		if (distance_behind_head < 0 || distance_behind_head > this->pulse_len)	{
 			return CRGB::Black;
 		}
 		// Use interpolator to get brightness
 		uint8_t lum = tail_interpolator.get_value(distance_behind_head);
-		uint8_t hue = (i*255) / this->resolution; // Change colour along axis
+		uint8_t hue = (i*255) / num_pixels; // Change colour along axis
 		return this->colorFromPalette(hue, lum);
 	}
 
@@ -47,19 +39,17 @@ class MovingPulse: public LinearStatePattern<t_resolution>   {
 	
     uint16_t head_pos;    				// Position of head of pulse
     uint8_t pulse_len;        			// Length of pulse 
-	uint8_t speed; 						// Number of virtual pixels to move each step
 	Interpolator tail_interpolator;  	// Linear Interpolator for pulse tail brightness
 	
 };
 
 //Moing sine wave with randomised speed, duration and rainbow colour offset, and changes direction
-template<uint16_t t_resolution> 
-class RandomRainbows: public LinearStatePattern<t_resolution>  {
+class RandomRainbows: public LinearPattern  {
   public:
-    RandomRainbows(): LinearStatePattern<t_resolution>(RainbowColors_p) {}
+    RandomRainbows(): LinearPattern(RainbowColors_p) {}
 	
 	void reset() override{
-		LinearStatePattern<t_resolution>::reset();
+		LinearPattern::reset();
 		this->pos = 0;
 		this->randomize_state();
 	}
@@ -73,25 +63,25 @@ class RandomRainbows: public LinearStatePattern<t_resolution>  {
 		this->dim = random(0, 7) == 6;
 	}
 	
-	void frameAction(uint32_t frame_time)  override {
+	void frameAction(CRGB* pixel_data, uint16_t num_pixels, uint32_t frame_time)  override {
 		if (randomize_time) {
 			randomize_time--;
 		} else {
 			this->randomize_state();
 		}
 		if (direction) {
-			this->pos = (this->pos + this->speed) % this->resolution;
+			this->pos = (this->pos + this->speed) % num_pixels;
 		} else {
-			this->pos = wrap_subtract(this->pos, this->speed, this->resolution);
+			this->pos = wrap_subtract(this->pos, this->speed, num_pixels);
 		}
-		for (uint16_t i = 0; i < this->resolution; i++) {
-		  this->pattern_state[i] = this->get_pos_value(i);
+		for (uint16_t i = 0; i < num_pixels; i++) {
+		  pixel_data[i] = this->get_pixel_value(num_pixels, i);
 		}
 		
 	}
 	 
-	CRGB get_pos_value(uint16_t i)  {
-		uint8_t virtual_pos = (255*(i + this->pos))/(this->resolution);
+	CRGB get_pixel_value(uint16_t num_pixels, uint16_t i)  {
+		uint8_t virtual_pos = (255*(i + this->pos))/(num_pixels);
 		uint8_t val = cubicwave8((virtual_pos*this->scale_factor)%255);
 		return this->colorFromPalette((val+this->colour_offset)%255, this->dim ? val>>2 : val);
 	}
@@ -110,14 +100,13 @@ class RandomRainbows: public LinearStatePattern<t_resolution>  {
 // Animated, ever-changing rainbows.
 // by Mark Kriegsman. https://github.com/FastLED/FastLED/blob/master/examples/Pride2015/Pride2015.ino
 // Recommend setting resolution equal to or close to number of leds in strip segment
-template<uint16_t t_resolution> 
-class PridePattern: public LinearStatePattern<t_resolution>	{
+class PridePattern: public LinearPattern	{
 	public:
 		PridePattern(uint8_t speed_factor=4):
-		  LinearStatePattern<t_resolution>(RainbowColors_p), 
+		  LinearPattern(RainbowColors_p), 
 		  speed_factor(speed_factor) {}
 		
-		void frameAction(uint32_t frame_time)	override {
+		void frameAction(CRGB* pixel_data, uint16_t num_pixels, uint32_t frame_time)	override {
 			static uint32_t sPseudotime = 0;  // pseudo-time elapsed since pattern start
 			static uint32_t sLastMillis = 0;  // actual time of last frame
 			static uint16_t sHue16 = 0;       // Hue offset with 16-bit resolution
@@ -143,7 +132,7 @@ class PridePattern: public LinearStatePattern<t_resolution>	{
 			// wave offset
 			uint16_t brightnesstheta16 = sPseudotime;
 
-			for( uint16_t i = 0 ; i < this->resolution; i++) {
+			for (uint16_t i = 0 ; i < num_pixels; i++) {
 				hue16 += hueinc16;
 				uint8_t hue8 = hue16 / 256;
 
@@ -158,7 +147,7 @@ class PridePattern: public LinearStatePattern<t_resolution>	{
 
 				CRGB newcolor = CHSV( hue8, sat8, bri8);
 				
-				nblend( this->pattern_state[i], newcolor, 64);
+				nblend(pixel_data[i], newcolor, 64);
 			}
 		}
 	protected:
@@ -180,13 +169,10 @@ CRGBPalette16 pacifica_palette_3 =
     { 0x000208, 0x00030E, 0x000514, 0x00061A, 0x000820, 0x000927, 0x000B2D, 0x000C33, 
       0x000E39, 0x001040, 0x001450, 0x001860, 0x001C70, 0x002080, 0x1040BF, 0x2060FF };
 	  
-template<uint16_t t_resolution> 
-class PacificaPattern: public LinearStatePattern<t_resolution>	{
-	public:
-		PacificaPattern():
-		  LinearStatePattern<t_resolution>(White_p) {}
-		
-		void frameAction(uint32_t frame_time)	override {
+
+class PacificaPattern: public LinearPattern	{
+	public:		
+		void frameAction(CRGB* pixel_data, uint16_t num_pixels, uint32_t frame_time)	override {
 			// Increment the four "color index start" counters, one for each wave layer.
 			// Each is incremented at a different speed, and the speeds vary over time.
 			static uint16_t sCIStart1, sCIStart2, sCIStart3, sCIStart4;
@@ -204,28 +190,28 @@ class PacificaPattern: public LinearStatePattern<t_resolution>	{
 			sCIStart4 -= (deltams2 * beatsin88(257,4,6));
 
 			// Clear out the LED array to a dim background blue-green
-			fill_solid(this->pattern_state, this->resolution, CRGB( 2, 6, 10));
+			fill_solid(pixel_data, num_pixels, CRGB( 2, 6, 10));
 
 			// Render each of four layers, with different scales and speeds, that vary over time
-			this->pacifica_one_layer( pacifica_palette_1, sCIStart1, beatsin16( 3, 11 * 256, 14 * 256), beatsin8( 10, 70, 130), 0-beat16( 301) );
-			this->pacifica_one_layer( pacifica_palette_2, sCIStart2, beatsin16( 4,  6 * 256,  9 * 256), beatsin8( 17, 40,  80), beat16( 401) );
-			this->pacifica_one_layer( pacifica_palette_3, sCIStart3, 6 * 256, beatsin8( 9, 10,38), 0-beat16(503));
-			this->pacifica_one_layer( pacifica_palette_3, sCIStart4, 5 * 256, beatsin8( 8, 10,28), beat16(601));
+			this->pacifica_one_layer(pixel_data, num_pixels, pacifica_palette_1, sCIStart1, beatsin16( 3, 11 * 256, 14 * 256), beatsin8( 10, 70, 130), 0-beat16( 301) );
+			this->pacifica_one_layer(pixel_data, num_pixels, pacifica_palette_2, sCIStart2, beatsin16( 4,  6 * 256,  9 * 256), beatsin8( 17, 40,  80), beat16( 401) );
+			this->pacifica_one_layer(pixel_data, num_pixels, pacifica_palette_3, sCIStart3, 6 * 256, beatsin8( 9, 10,38), 0-beat16(503));
+			this->pacifica_one_layer(pixel_data, num_pixels, pacifica_palette_3, sCIStart4, 5 * 256, beatsin8( 8, 10,28), beat16(601));
 
 			// Add brighter 'whitecaps' where the waves lines up more
-			this->pacifica_add_whitecaps();
+			this->pacifica_add_whitecaps(pixel_data, num_pixels);
 
 			// Deepen the blues and greens a bit
-			this->pacifica_deepen_colors();
+			this->pacifica_deepen_colors(pixel_data, num_pixels);
 		}
 	protected:
 		// Add one layer of waves into the led array
-		void pacifica_one_layer( CRGBPalette16& p, uint16_t cistart, uint16_t wavescale, uint8_t bri, uint16_t ioff)
+		void pacifica_one_layer(CRGB* pixel_data, uint16_t num_pixels, CRGBPalette16& p, uint16_t cistart, uint16_t wavescale, uint8_t bri, uint16_t ioff)
 		{
 			uint16_t ci = cistart;
 			uint16_t waveangle = ioff;
 			uint16_t wavescale_half = (wavescale / 2) + 20;
-			for( uint16_t i = 0; i < this->resolution; i++) {
+			for( uint16_t i = 0; i < num_pixels; i++) {
 				waveangle += 250;
 				uint16_t s16 = sin16( waveangle ) + 32768;
 				uint16_t cs = scale16( s16 , wavescale_half ) + wavescale_half;
@@ -233,33 +219,33 @@ class PacificaPattern: public LinearStatePattern<t_resolution>	{
 				uint16_t sindex16 = sin16( ci) + 32768;
 				uint8_t sindex8 = scale16( sindex16, 240);
 				CRGB c = ColorFromPalette( p, sindex8, bri, LINEARBLEND);
-				this->pattern_state[i] += c;
+				pixel_data[i] += c;
 			}
 		}
 		// Add extra 'white' to areas where the four layers of light have lined up brightly
-		void pacifica_add_whitecaps()
+		void pacifica_add_whitecaps(CRGB* pixel_data, uint16_t num_pixels)
 		{
 			uint8_t basethreshold = beatsin8( 9, 55, 65);
 			uint8_t wave = beat8( 7 );
 
-			for( uint16_t i = 0; i < this->resolution; i++) {
+			for( uint16_t i = 0; i < num_pixels; i++) {
 				uint8_t threshold = scale8( sin8( wave), 20) + basethreshold;
 				wave += 7;
-				uint8_t l = this->pattern_state[i].getAverageLight();
+				uint8_t l = pixel_data[i].getAverageLight();
 				if( l > threshold) {
 					uint8_t overage = l - threshold;
 					uint8_t overage2 = qadd8( overage, overage);
-					this->pattern_state[i] += CRGB( overage, overage2, qadd8( overage2, overage2));
+					pixel_data[i] += CRGB( overage, overage2, qadd8( overage2, overage2));
 				}
 			}
 		}
 		// Deepen the blues and greens
-		void pacifica_deepen_colors()
+		void pacifica_deepen_colors(CRGB* pixel_data, uint16_t num_pixels)
 		{
-			for( uint16_t i = 0; i < this->resolution; i++) {
-				this->pattern_state[i].blue = scale8( this->pattern_state[i].blue,  145); 
-				this->pattern_state[i].green= scale8( this->pattern_state[i].green, 200); 
-				this->pattern_state[i] |= CRGB( 2, 5, 7);
+			for( uint16_t i = 0; i < num_pixels; i++) {
+				pixel_data[i].blue = scale8( pixel_data[i].blue,  145); 
+				pixel_data[i].green= scale8( pixel_data[i].green, 200); 
+				pixel_data[i] |= CRGB( 2, 5, 7);
 			}
 		}
 };
@@ -289,30 +275,37 @@ void coolLikeIncandescent( CRGB& c, uint8_t phase)
 //  the exact same wave function over time.  In this particular case,
 //  I chose a sawtooth triangle wave (triwave8) rather than a sine wave,
 //  but the idea is the same: brightness = triwave8( time ).
-template<uint16_t t_resolution> 
-class Twinkle : public LinearStatePattern<t_resolution>   {
+// 	Works well when resolution is equal to segment length
+class Twinkle : public LinearPattern   {
   public:
-    Twinkle(uint8_t twinkle_speed = 6, CRGBPalette16 colour_palette = FairyLight_p, uint8_t twinkle_density = 4, CRGB bg = CRGB::Black):
-      LinearStatePattern<t_resolution>(colour_palette), bg(bg), bg_brightness(bg.getAverageLight()), twinkle_speed(twinkle_speed), twinkle_density(twinkle_density)  {}
+    Twinkle(
+		uint8_t twinkle_speed = 6, 
+		uint8_t twinkle_density = 4, 
+		CRGBPalette16 colour_palette = FairyLight_p, 
+		CRGB bg = CRGB::Black):
+      LinearPattern(colour_palette), 
+	  bg(bg), 
+	  bg_brightness(bg.getAverageLight()), 
+	  twinkle_speed(twinkle_speed), 
+	  twinkle_density(twinkle_density)  {}
 
-    void frameAction(uint32_t frame_time) override {
+    void frameAction(CRGB* pixel_data, uint16_t num_pixels, uint32_t frame_time) override {
 		// "this->PRNG16" is the pseudorandom number generator
 		this->PRNG16 = 11337;
-		this->clock32 = frame_time;
-		// Set pattern state
-		for (uint16_t i=0; i<this->resolution; i++) {
-		  this->pattern_state[i] = this->get_pos_value(i);
+		// Set pixel data
+		for (uint16_t i=0; i<num_pixels; i++) {
+		  pixel_data[i] = this->get_pixel_value(frame_time, i);
 		}
     }
 
-    CRGB get_pos_value(uint16_t i)  {
+    CRGB get_pixel_value(uint16_t frame_time, uint16_t i)  {
       CRGB pixel;
       this->PRNG16 = (uint16_t)(this->PRNG16 * 2053) + 1384; // next 'random' number
       uint16_t myclockoffset16 = this->PRNG16; // use that number as clock offset
       this->PRNG16 = (uint16_t)(this->PRNG16 * 2053) + 1384; // next 'random' number
       // use that number as clock speed adjustment factor (in 8ths, from 8/8ths to 23/8ths)
       uint8_t myspeedmultiplierQ5_3 =  ((((this->PRNG16 & 0xFF) >> 4) + (this->PRNG16 & 0x0F)) & 0x0F) + 0x08;
-      uint32_t myclock30 = (uint32_t)((this->clock32 * myspeedmultiplierQ5_3) >> 3) + myclockoffset16;
+      uint32_t myclock30 = (uint32_t)((frame_time * myspeedmultiplierQ5_3) >> 3) + myclockoffset16;
       uint8_t  myunique8 = this->PRNG16 >> 8; // get 'salt' value for this pixel
 
       // We now have the adjusted 'clock' for this pixel, now we call
@@ -367,14 +360,14 @@ class Twinkle : public LinearStatePattern<t_resolution>   {
 
     uint8_t twinkle_speed;     // 0-8
     uint8_t twinkle_density;   // 0-8
-    uint16_t PRNG16, clock32;
+    uint16_t PRNG16;
 };
 
 // Extends head to end of strip then retracts tail
 class GrowThenShrink : public LinearPattern  {
 	public:
-		GrowThenShrink(uint16_t resolution, CRGBPalette16 colour_palette = RainbowColors_p):
-		LinearPattern(resolution, colour_palette) {}
+		GrowThenShrink(CRGBPalette16 colour_palette = RainbowColors_p):
+		LinearPattern(colour_palette) {}
 		
 		void reset() override {
 			LinearPattern::reset();
@@ -382,7 +375,8 @@ class GrowThenShrink : public LinearPattern  {
 			this->reverse = false;
 		}
 
-		void frameAction(uint32_t frame_time) override {
+		void frameAction(CRGB* pixel_data, uint16_t num_pixels, uint32_t frame_time) override {
+			// Update head and tail positions
 			if (this->reverse) 	{
 				if (this->tail_pos > 0)	{
 					// Extend along light strip
@@ -395,7 +389,7 @@ class GrowThenShrink : public LinearPattern  {
 					this->reverse = false;
 				}	
 			} else {
-				if (this->head_pos < this->resolution-1)	{
+				if (this->head_pos < num_pixels-1)	{
 					// Extend along light strip
 					this->head_pos++;
 				} else if (this->tail_pos < this->head_pos) {
@@ -407,61 +401,62 @@ class GrowThenShrink : public LinearPattern  {
 				}	
 			}
 
-		}
-
-		CRGB getPixelValue(uint16_t i)  const override  {
-			if ((this->tail_pos <= i) && (i <= this->head_pos)) 	{
-				return this->colorFromPalette((i*255)/this->resolution);
-			} else {
-				return CRGB::Black;
+			// Set pixel data
+			for (uint16_t i=0; i<num_pixels; i++) {
+				if ((this->tail_pos <= i) && (i <= this->head_pos)) 	{
+					pixel_data[i] = this->colorFromPalette((i*255)/num_pixels);
+				} else {
+					pixel_data[i] = CRGB::Black;
+				}
 			}
 		}
+
 	protected:
 		uint16_t head_pos, tail_pos;
 		bool reverse;
 };
 		
-template<uint16_t t_resolution> 
-class SparkleFill : public LinearStatePattern<t_resolution>  {
+class SparkleFill : public LinearPattern {
   public:
     SparkleFill(CRGBPalette16 colour_palette=RainbowColors_p):
-      LinearStatePattern<t_resolution>(colour_palette) {}
+      LinearPattern(colour_palette) {}
 	  
 	void reset() {
-		LinearStatePattern<t_resolution>::reset();
+		LinearPattern::reset();
 		this->fill = true;
-		this->remaining = this->resolution;
+		this->pixels_changed = 0;
 	}
 	
-	void frameAction(uint32_t frame_time)	override {
-		for (uint16_t i=0; i < this->resolution; i++) 	{
-			uint8_t brightness = this->pattern_state[i].getAverageLight();
-			// Probabilty to fill/un-fill is proportional to amount remaining
-			if (random(0,this->remaining) == 0) {
+	void frameAction(CRGB* pixel_data, uint16_t num_pixels, uint32_t frame_time)	override {
+		uint16_t remaining = num_pixels - this->pixels_changed;
+		for (uint16_t i=0; i < num_pixels; i++) 	{
+			uint8_t brightness = pixel_data[i].getAverageLight();
+			// Probabilty to fill/un-fill the pixel is inversely proportional to amount remaining
+			if (random(0,remaining) == 0) {
 				// Fill with random palette value, or unfill
 				if (brightness) 	{
 					// Brighten existing pixel if filling
 					if (this->fill)	{
 						if (brightness < 200)	{
-							this->pattern_state[i]*=2;
-						}
+							pixel_data[i]*=2;
+						} 
 					} else {
 						// reduce brightness or set to black if un-filling
 						if (brightness > 32)	{
-							this->pattern_state[i]/= 2;
+							pixel_data[i]/= 2;
 						} else {
-							this->pattern_state[i] = CRGB::Black;
-							this->remaining--;
+							pixel_data[i] = CRGB::Black;
+							this->pixels_changed++;
 						}
 					}
 				} else if (this->fill) {
 					// Fill with new colour
-					this->pattern_state[i] = this->colorFromPalette(random(0,256), 32);
-					this->remaining--;
+					pixel_data[i] = this->colorFromPalette(random(0,256), 32);
+					this->pixels_changed++;
 				}
 				
-				if (this->remaining == 0)	{
-					this->remaining = this->resolution;
+				if (this->pixels_changed == num_pixels)	{
+					this->pixels_changed = 0;
 					this->fill = !this->fill;
 				}
 			}
@@ -471,21 +466,21 @@ class SparkleFill : public LinearStatePattern<t_resolution>  {
 	
 	protected:
 		bool fill=true;   // Whether pattern is in fill mode (True) or un-fill
-		uint16_t remaining=t_resolution;	// Number of remaining pixels to fill/un-fill
+		uint16_t pixels_changed=0;	// Number of remaining pixels to fill/un-fill
 	
 };
 
 //https://gist.github.com/kriegsman/626dca2f9d2189bd82ca
 // *Flashing* rainbow lights that zoom back and forth to a beat.
-template<uint16_t t_resolution> 
-class DiscoStrobe : public LinearStatePattern<t_resolution>  {
+class DiscoStrobe : public LinearPattern  {
   public:
-    DiscoStrobe(CRGBPalette16 colour_palette=HalloweenColors_p):
-      LinearStatePattern<t_resolution>(colour_palette) {}
+    DiscoStrobe(
+		CRGBPalette16 colour_palette=HalloweenColors_p):
+      LinearPattern(colour_palette) {}
 	
-	void frameAction(uint32_t frame_time)	override {
+	void frameAction(CRGB* pixel_data, uint16_t num_pixels, uint32_t frame_time)	override {
 		// First, we black out all the LEDs
-		fill_solid(this->pattern_state, this->resolution, CRGB::Black);
+		fill_solid(pixel_data, num_pixels, CRGB::Black);
 		
 		// To achive the strobe effect, we actually only draw lit pixels
 		// every Nth frame (e.g. every 4th frame).  
@@ -555,13 +550,14 @@ class DiscoStrobe : public LinearStatePattern<t_resolution>  {
 
 			// Now that all the parameters for this frame are calculated,
 			// we call the 'worker' function that does the next part of the work.
-			this->discoWorker( dashperiod, dashwidth, dashmotionspeed, strobesPerPosition, hueShift);
+			this->discoWorker(pixel_data, num_pixels, dashperiod, dashwidth, dashmotionspeed, strobesPerPosition, hueShift);
 		}
 
 	}
 	protected:
 		// discoWorker updates the positions of the dashes, and calls the draw function
 		void discoWorker( 
+			CRGB* pixel_data, uint16_t num_pixels,
 			uint8_t dashperiod, uint8_t dashwidth, int8_t  dashmotionspeed,
 			uint8_t stroberepeats,
 			uint8_t huedelta)
@@ -599,10 +595,9 @@ class DiscoStrobe : public LinearStatePattern<t_resolution>  {
 		  const uint8_t kValue = 255;
 
 		  // call the function that actually just draws the dashes now
-		  this->drawRainbowDashes( sStartPosition, 
-							 dashperiod, dashwidth, 
-							 sStartHue, huedelta, 
-							 kSaturation, kValue);
+		  this->drawRainbowDashes(pixel_data, num_pixels,
+		   						sStartPosition, dashperiod, dashwidth, 
+							 	sStartHue, huedelta, kSaturation, kValue);
 		}
 		// drawRainbowDashes - draw rainbow-colored 'dashes' of light along the led strip:
 		//   starting from 'startpos', up to and including 'lastpos'
@@ -615,11 +610,12 @@ class DiscoStrobe : public LinearStatePattern<t_resolution>  {
 		//                                   period 5      width 2
 		//
 		void drawRainbowDashes( 
+			CRGB* pixel_data, uint16_t num_pixels,
 		  uint8_t startpos, uint8_t period, uint8_t width, 
 		  uint8_t huestart, uint8_t huedelta, uint8_t saturation, uint8_t value)
 		{
 		  uint8_t hue = huestart;
-		  for( uint16_t i = startpos; i <= this->resolution-1; i += period) {
+		  for( uint16_t i = startpos; i <= num_pixels-1; i += period) {
 			// Switched from HSV color wheel to color palette
 			// Was: CRGB color = CHSV( hue, saturation, value); 
 			CRGB color = this->colorFromPalette(hue, value, NOBLEND);
@@ -627,9 +623,9 @@ class DiscoStrobe : public LinearStatePattern<t_resolution>  {
 			// draw one dash
 			uint16_t pos = i;
 			for( uint8_t w = 0; w < width; w++) {
-			  this->pattern_state[ pos ] = color;
+			  pixel_data[pos] = color;
 			  pos++;
-			  if( pos >= this->resolution) {
+			  if( pos >= num_pixels) {
 				break;
 			  }
 			}
@@ -647,7 +643,7 @@ class FirePattern: public LinearPattern   {
 		FirePattern(
 		uint8_t cooling=60,    // Less cooling = taller flames.  More cooling = shorter flames. Default 60, suggested range 20-100 
 		uint8_t sparking=100): // Higher chance = more roaring fire.  Lower chance = more flickery fire. Default 100, suggested range 50-200.
-		LinearPattern(t_resolution, CRGBPalette16( CRGB::Black, CRGB::Red, CRGB::Yellow, CRGB::White)),
+		LinearPattern(HeatColors_p),
 		cooling(cooling),  	
 		sparking(sparking)  
 		{
@@ -657,45 +653,111 @@ class FirePattern: public LinearPattern   {
 	void reset()	override {
 		LinearPattern::reset();
 		// Reset heat array to 0
-		for (uint8_t i=0; i<this->resolution; i++) {
+		for (uint8_t i=0; i<t_resolution; i++) {
 			this->heat[i] = 0;
 		}	
 	}
 		
-	void frameAction(uint32_t frame_time) override {
+	void frameAction(CRGB* pixel_data, uint16_t num_pixels, uint32_t frame_time) override {
 		random16_add_entropy(random());
 		// Step 1.  Cool down every cell a little
-		for(uint8_t i = 0; i < this->resolution; i++) {
-		  this->heat[i] = qsub8( this->heat[i],  random8(0, ((this->cooling * 10) / this->resolution) + 2));
+		for(uint8_t i = 0; i < num_pixels; i++) {
+		  this->heat[i] = qsub8( this->heat[i],  random8(0, ((this->cooling * 10) / num_pixels) + 2));
 		}
 	  
 		// Step 2.  Heat from each cell drifts 'up' and diffuses a little
-		for(uint8_t k= this->resolution - 1; k >= 2; k--) {
+		for(uint8_t k= num_pixels - 1; k >= 2; k--) {
 		  this->heat[k] = (this->heat[k - 1] + 2*this->heat[k - 2]) / 3;
 		}
 		
 		// Step 3.  Randomly ignite new 'sparks' of heat near the bottom
 		if(random8() < this->sparking ) {
-		  uint8_t y = random8(this->resolution/5 + 1);
+		  uint8_t y = random8(num_pixels/5 + 1);
 		  this->heat[y] = qadd8( this->heat[y], random8(160,220) );
 		}
-	}
-	
-	CRGB getPixelValue(uint16_t i) const override {
-		// Get heat value, Scale from 0-255 down to 0-240, select colour from palette
-		uint8_t colorindex = scale8(this->heat[i], 240);
-		// Constrain base heat (so base of fire doesnt look too bright
-		if (i < (this->resolution/10) + 1)	{
-			colorindex = constrain(colorindex, 40, 120);
+
+		// Fill pixel array
+		for (uint16_t i=0; i < num_pixels; i++) 	{
+			// Get heat value, Scale from 0-255 down to 0-240, select colour from palette
+			uint8_t colorindex = scale8(this->heat[i], 240);
+			// Constrain base heat (so base of fire doesnt look too bright
+			if (i < (num_pixels/10) + 1)	{
+				colorindex = constrain(colorindex, 40, 120);
+			}
+			pixel_data[i] = this->colorFromPalette(colorindex);
 		}
-		return this->colorFromPalette(colorindex);
 	}
-	
+	   
 	protected:
-		uint8_t heat[t_resolution]; // Array to store heat values
-		uint8_t cooling, sparking;
+		uint8_t heat[t_resolution]; 		// Array to store heat values
+		const uint8_t cooling, sparking;
 	
 };
+
+
+// Pulse which jumps to random position on segment and flashes
+class SkippingSpike: public LinearPattern  {
+  public:
+    SkippingSpike(
+      uint8_t max_pulse_width,
+      uint8_t pulse_speed=1,
+	  CRGBPalette16 colour_palette=RainbowColors_p):
+      LinearPattern(colour_palette),
+	    max_pulse_width(max_pulse_width),
+	    pulse_speed(pulse_speed) {}
+	 
+    void reset() override {
+      LinearPattern::reset();
+      this->pulse_pos = this->max_pulse_width;
+      this->ramp = 0;
+      this->ramp_up= true;
+    }
+
+    void frameAction(CRGB* pixel_data, uint16_t num_pixels, uint32_t frame_time)  override {
+        if (this->ramp_up) {	// Pulse expanding		
+          if (this->max_pulse_width-this->ramp <= this->pulse_speed) {  // Reached top of pulse
+            this->ramp_up = false;
+          } else {
+            this->ramp += this->pulse_speed;  // Increase pulse brightness
+          }
+        } else {  // Pulse contracting
+          if (this->ramp <= this->pulse_speed) {  // End of pulse
+            // Move pulse position
+            this->pulse_pos = (this->max_pulse_width/4) + random(0, num_pixels - this->max_pulse_width/4);
+            /*
+            if ((this->resolution - pulse_pos) <= pulse_offset) {
+              // Loop over position back to start
+              this->pulse_pos = pulse_offset/2;
+            } else {
+              this->pulse_pos += pulse_offset; 
+            }
+            */
+            this->ramp_up = true;	 // Begin next pulse
+          } else {
+            this->ramp -= this->pulse_speed;  
+          }
+        }
+
+		// Fill pixel array
+		for (uint16_t i=0; i < num_pixels; i++) 	{
+			// Get distance of pixel from pulse_pos
+			uint8_t diff = i >= this->pulse_pos ? i - this->pulse_pos : this->pulse_pos - i;
+			if (diff > this->ramp) {
+				pixel_data[i] = CRGB::Black;
+			} else {
+				uint8_t lum = (255 - (diff*255)/this->ramp);
+				pixel_data[i] = this->colorFromPalette(255-lum, lum);
+			}
+		}
+    }
+
+	protected:
+		const uint8_t max_pulse_width, pulse_speed;
+		uint16_t pulse_pos; //Position of current pulse
+		uint8_t ramp;
+		bool ramp_up;
+};
+
 
 class GrowingSphere: public SpatialPattern	{
 	public:
