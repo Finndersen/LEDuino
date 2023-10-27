@@ -18,7 +18,7 @@ class BasePatternMapper {
 		virtual void newFrame(CRGB* leds, uint16_t frame_time) const = 0;
 		
 		// Set palette of underlying pattern(s)
-		virtual void setPalette(CRGBPalette16 new_palette) const = 0;
+		virtual void setPalette(const TProgmemRGBPalette16& new_palette) const = 0;
 		
 		// Reset palette of underlying pattern(s) to one it was initialised with
 		virtual void resetPalette()	const = 0;
@@ -44,7 +44,7 @@ class BaseLinearPatternMapper: public BasePatternMapper {
 		};
 
 		// Set palette of underlying pattern(s)
-		void setPalette(CRGBPalette16 new_palette) const override	{
+		void setPalette(const TProgmemRGBPalette16& new_palette) const override	{
 			this->pattern.setPalette(new_palette);
 		};
 		
@@ -69,7 +69,7 @@ class LinearPatternMapper: public BaseLinearPatternMapper {
 			LinearPattern& pattern,   				// LinearPattern to map to segments
 			CRGB* pixel_data,						// Pixel array for LinearPattern to mutate (length equal to num_pixels)
 			uint16_t num_pixels,					// Number of pixels for linear pattern to use (pattern resolution)
-			StripSegment* strip_segments,			// Array of StripSegments to map pattern to
+			StripSegment strip_segments[],			// Array of StripSegments to map pattern to
 			uint8_t num_segments					// Number of axes (length of strip_segments)
 		): 
 		BaseLinearPatternMapper(pattern, pixel_data, num_pixels), 
@@ -193,11 +193,11 @@ class SpatialPatternMapper: public BasePatternMapper {
 	public:
 		// Constructor
 		SpatialPatternMapper(
-			SpatialPattern& pattern,   					// Reference to SpatialPattern object
-			SpatialStripSegment spatial_segments[],		// Array of SpatialStripSegments to map pattern to
-			uint8_t num_segments,						// Number of SpatialStripSegments (length of spatial_segments)
-			Point offset=undefinedPoint,				// Translational offset to apply to Project coordinate system before scaling
-			Point scale_factors=undefinedPoint			// Scaling factors to apply to Project coordinate system to map to Pattern coordinates 
+			SpatialPattern& pattern,   								// Reference to SpatialPattern object
+			SpatialStripSegment_T* spatial_segments[],				// Array of SpatialStripSegment pointers to map pattern to
+			uint8_t num_segments,									// Number of SpatialStripSegments (length of spatial_segments)
+			Point offset=undefinedPoint,							// Translational offset to apply to Project coordinate system before scaling
+			Point scale_factors=undefinedPoint						// Scaling factors to apply to Project coordinate system to map to Pattern coordinates 
 		): 
 		pattern(pattern), 
 		spatial_segments(spatial_segments), 
@@ -231,13 +231,13 @@ class SpatialPatternMapper: public BasePatternMapper {
 			this->pattern.frameAction(frame_time);
 			// Loop through every LED (segment and segment index combination), determine spatial position and get value
 			for (uint8_t segment_id=0; segment_id < this->num_segments; segment_id++) {
-				SpatialStripSegment& spatial_segment = this->spatial_segments[segment_id];
+				SpatialStripSegment_T* spatial_segment = this->spatial_segments[segment_id];
 				// Loop through all positions on axis
-				for (uint16_t segment_pos=0; segment_pos < spatial_segment.strip_segment.segment_len; segment_pos++) {
+				for (uint16_t segment_pos=0; segment_pos < spatial_segment->strip_segment.segment_len; segment_pos++) {
 					// Get position from spatial axis
-					Point pos = spatial_segment.getSpatialPosition(segment_pos);
+					Point pos = spatial_segment->getSpatialPosition(segment_pos);
 					// Get LED ID from strip segment
-					uint16_t led_id = spatial_segment.strip_segment.getLEDId(segment_pos);
+					uint16_t led_id = spatial_segment->strip_segment.getLEDId(segment_pos);
 					// Translate spatial position to pattern coordinates
 					Point pattern_pos = ((pos - this->offset)).hadamard_product(this->scale_factors);
 					// Get and assign LED value from pattern
@@ -247,7 +247,7 @@ class SpatialPatternMapper: public BasePatternMapper {
 		}
 		
 		// Set palette of underlying pattern(s)
-		void setPalette(CRGBPalette16 new_palette) const override 	{
+		void setPalette(const TProgmemRGBPalette16& new_palette) const override 	{
 			this->pattern.setPalette(new_palette);
 		};
 		
@@ -258,7 +258,7 @@ class SpatialPatternMapper: public BasePatternMapper {
 		
 	protected:
 		SpatialPattern& pattern;
-		SpatialStripSegment* spatial_segments;	// Array of points to SpatialStripSegments to map pattern to
+		SpatialStripSegment_T** spatial_segments;	// Array of SpatialStripSegment pointers to map pattern to
 		const uint8_t num_segments;		// Number of configured strip segments to map pattern to
 		Point offset;  					// Offset of Pattern space from Project space (in Project coordinates, before scaling applied)
 		Point scale_factors; 			// Scaling vector for Project space to Pattern space transformation
@@ -279,7 +279,7 @@ class LinearToSpatialPatternMapper : public BaseLinearPatternMapper {
 			CRGB* pixel_data,							// Pixel array for LinearPattern to mutate (length equal to pattern resolution)
 			uint16_t num_pixels,						// Number of pixels for linear pattern to use (pattern resolution)
 			Point pattern_vector,						// Direction vector to map pattern to
-			SpatialStripSegment spatial_segments[],		// Array of SpatialStripSegments to map pattern to
+			SpatialStripSegment_T* spatial_segments[],		// Array of SpatialStripSegments to map pattern to
 			uint8_t num_segments,						// Number of SpatialStripSegments (length of spatial_segments)
 			int16_t offset=0,							// Offset of pattern vector start position
 			float scale=1,								// Scaling factor to apply to linear pattern vector length
@@ -319,13 +319,13 @@ class LinearToSpatialPatternMapper : public BaseLinearPatternMapper {
 			this->pattern.frameAction(this->pixel_data, this->num_pixels, frame_time);
 			// Loop through every LED (axis and axis position combination), determine spatial position and appropriate state from pattern
 			for (uint8_t segment_id=0; segment_id < this->num_segments; segment_id++) {
-				SpatialStripSegment& spatial_axis = this->spatial_segments[segment_id];
+				SpatialStripSegment_T* spatial_axis = this->spatial_segments[segment_id];
 				// Loop through all positions on segment
-				for (uint16_t segment_pos=0; segment_pos<spatial_axis.strip_segment.segment_len; segment_pos++) {
+				for (uint16_t segment_pos=0; segment_pos<spatial_axis->strip_segment.segment_len; segment_pos++) {
 					// Get global LED ID from strip segment
-					uint16_t led_id = spatial_axis.strip_segment.getLEDId(segment_pos);
+					uint16_t led_id = spatial_axis->strip_segment.getLEDId(segment_pos);
 					// Get spatial position of LED
-					Point led_pos = spatial_axis.getSpatialPosition(segment_pos);
+					Point led_pos = spatial_axis->getSpatialPosition(segment_pos);
 					// If mirroring is not enabled, need check if LED pos is in pattern_vector direction from start_pos
 					if (!this->mirrored) {
 						// Get projected LED position on pattern path
@@ -354,7 +354,7 @@ class LinearToSpatialPatternMapper : public BaseLinearPatternMapper {
 		
 	protected:
 		const Point pattern_vector;   			// Vector of direction to apply linear pattern
-		SpatialStripSegment* spatial_segments;
+		SpatialStripSegment_T** spatial_segments;
 		const uint8_t num_segments;				// Number of configured strip segments to map pattern to
 		const bool mirrored;
 
@@ -392,7 +392,7 @@ class MultiplePatternMapper : public BasePatternMapper {
 		}
 		
 		// Set palette of underlying pattern(s)
-		void setPalette(CRGBPalette16 new_palette) const override {
+		void setPalette(const TProgmemRGBPalette16& new_palette) const override {
 			for (uint8_t i=0; i < this->num_mappings; i++) {
 				this->mappings[i]->setPalette(new_palette);
 			}

@@ -2,11 +2,11 @@
 #include "Pattern.h"
 
 // Simple moving pulse of light along axis. Pulse has a bright head with a tapering tail
-class MovingPulse: public LinearPattern   {
+class MovingPulsePattern: public LinearPattern   {
   public:
-    MovingPulse(
+    MovingPulsePattern(
 		uint8_t pulse_len=3, 	// Length of pulse 
-		CRGBPalette16 colour_palette = RainbowColors_p):
+		const TProgmemRGBPalette16& colour_palette = RainbowColors_p):
       LinearPattern(colour_palette), 
 	  head_pos(0), 
 	  pulse_len(pulse_len), 	
@@ -48,9 +48,9 @@ class MovingPulse: public LinearPattern   {
 };
 
 //Moing sine wave with randomised speed, duration and rainbow colour offset, and changes direction
-class RandomRainbows: public LinearPattern  {
+class RandomRainbowsPattern: public LinearPattern  {
   public:
-    RandomRainbows(): LinearPattern(RainbowColors_p) {}
+    RandomRainbowsPattern(): LinearPattern(RainbowColors_p) {}
 	
 	void reset() override{
 		LinearPattern::reset();
@@ -280,12 +280,12 @@ void coolLikeIncandescent( CRGB& c, uint8_t phase)
 //  I chose a sawtooth triangle wave (triwave8) rather than a sine wave,
 //  but the idea is the same: brightness = triwave8( time ).
 // 	Works well when resolution is equal to segment length
-class Twinkle : public LinearPattern   {
+class TwinklePattern : public LinearPattern   {
   public:
-    Twinkle(
+    TwinklePattern(
 		uint8_t twinkle_speed = 6, 
 		uint8_t twinkle_density = 4, 
-		CRGBPalette16 colour_palette = FairyLight_p, 
+		const TProgmemRGBPalette16& colour_palette = FairyLight_p, 
 		CRGB bg = CRGB::Black):
       LinearPattern(colour_palette), 
 	  bg(bg), 
@@ -368,9 +368,9 @@ class Twinkle : public LinearPattern   {
 };
 
 // Extends head to end of strip then retracts tail
-class GrowThenShrink : public LinearPattern  {
+class GrowThenShrinkPattern : public LinearPattern  {
 	public:
-		GrowThenShrink(CRGBPalette16 colour_palette = RainbowColors_p):
+		GrowThenShrinkPattern(const TProgmemRGBPalette16& colour_palette = RainbowColors_p):
 		LinearPattern(colour_palette) {}
 		
 		void reset() override {
@@ -420,9 +420,9 @@ class GrowThenShrink : public LinearPattern  {
 		bool reverse;
 };
 		
-class SparkleFill : public LinearPattern {
+class SparkleFillPattern : public LinearPattern {
   public:
-    SparkleFill(CRGBPalette16 colour_palette=RainbowColors_p):
+    SparkleFillPattern(const TProgmemRGBPalette16& colour_palette=RainbowColors_p):
       LinearPattern(colour_palette) {}
 	  
 	void reset() {
@@ -476,10 +476,10 @@ class SparkleFill : public LinearPattern {
 
 //https://gist.github.com/kriegsman/626dca2f9d2189bd82ca
 // *Flashing* rainbow lights that zoom back and forth to a beat.
-class DiscoStrobe : public LinearPattern  {
+class DiscoStrobePattern : public LinearPattern  {
   public:
-    DiscoStrobe(
-		CRGBPalette16 colour_palette=HalloweenColors_p):
+    DiscoStrobePattern(
+		const TProgmemRGBPalette16& colour_palette=HalloweenColors_p):
       LinearPattern(colour_palette) {}
 	
 	void frameAction(CRGB* pixel_data, uint16_t num_pixels, uint32_t frame_time)	override {
@@ -700,12 +700,12 @@ class FirePattern: public LinearPattern   {
 
 
 // Pulse which jumps to random position on segment and flashes
-class SkippingSpike: public LinearPattern  {
+class SkippingSpikePattern: public LinearPattern  {
   public:
-    SkippingSpike(
+    SkippingSpikePattern(
       uint8_t max_pulse_width,
       uint8_t pulse_speed=1,
-	  CRGBPalette16 colour_palette=RainbowColors_p):
+	  const TProgmemRGBPalette16& colour_palette=RainbowColors_p):
       LinearPattern(colour_palette),
 	    max_pulse_width(max_pulse_width),
 	    pulse_speed(pulse_speed) {}
@@ -763,11 +763,11 @@ class SkippingSpike: public LinearPattern  {
 };
 
 
-class GrowingSphere: public SpatialPattern	{
+class GrowingSpherePattern: public SpatialPattern	{
 	public:
-		GrowingSphere(
+		GrowingSpherePattern(
 			uint8_t speed=1,
-			CRGBPalette16 colour_palette=RainbowColors_p
+			const TProgmemRGBPalette16& colour_palette=RainbowColors_p
 		) : SpatialPattern(colour_palette), 
 		speed(speed) {}
 		

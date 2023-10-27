@@ -53,7 +53,7 @@ class MappingRunner {
 		};
 
 		// Set palette of underlying pattern(s)
-	  	void setPalette(CRGBPalette16 new_palette)	{
+	  	void setPalette(const TProgmemRGBPalette16& new_palette)	{
 			this->pattern_mapper.setPalette(new_palette);
 		};
 		

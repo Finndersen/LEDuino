@@ -5,7 +5,6 @@
 #include "utils.h"
 #include "palettes.h"
 
-
 // Abstract Base class for patterns. Subclasses override frameAction() to implement pattern logic
 // Pattern logic can be defined in terms of frames (so that speed will be determined by framerate), 
 // or by absolute time (using frame_time or FastLED beatX functions)
@@ -13,9 +12,9 @@ class BasePattern	{
 	public:
 		// Constructor
 		BasePattern(				
-			CRGBPalette16 colour_palette=White_p		// Colour palette to use for pattern (default to white)
+			const TProgmemRGBPalette16& colour_palette=White_p		// Colour palette to use for pattern (default to white)
 			): 
-			colour_palette(colour_palette), 
+			colour_palette(&colour_palette), 
 			initial_palette(colour_palette) {} 
 			
 			
@@ -24,13 +23,13 @@ class BasePattern	{
 
 		
 		// Set new pattern palette
-		void setPalette(CRGBPalette16 new_palette)	{
-			this->colour_palette = new_palette;
+		void setPalette(const TProgmemRGBPalette16& new_palette)	{
+			this->colour_palette = &new_palette;
 		}
 		
 		// Reset palette to one pattern was initialised with
 		void resetPalette()	{
-			this->colour_palette = this->initial_palette;
+			this->colour_palette = &this->initial_palette;
 		}
 		
 
@@ -38,11 +37,11 @@ class BasePattern	{
 	
 		// Select colour from current palette
 		CRGB colorFromPalette(uint8_t hue, uint8_t bright=255, TBlendType blendType=LINEARBLEND) const {
-			return ColorFromPalette(this->colour_palette, hue, bright, blendType);
+			return ColorFromPalette(*this->colour_palette, hue, bright, blendType);
 		}
 		
-		CRGBPalette16 colour_palette;
-		const CRGBPalette16 initial_palette;
+		const TProgmemRGBPalette16* colour_palette;
+		const TProgmemRGBPalette16& initial_palette;
 };
 
 // Base class for patterns defined on a simple linear axis 
@@ -50,7 +49,7 @@ class BasePattern	{
 class LinearPattern: public BasePattern	{
 	public:
 		LinearPattern(	
-			CRGBPalette16 colour_palette=White_p	// Colour palette to use for pattern 
+			const TProgmemRGBPalette16& colour_palette=White_p	// Colour palette to use for pattern 
 		): 
 		BasePattern(colour_palette) {}
 
@@ -98,7 +97,7 @@ class LinearPattern: public BasePattern	{
 class SpatialPattern : public BasePattern {
 	public:
 		SpatialPattern(	
-			CRGBPalette16 colour_palette=White_p,	// Colour palette to use for pattern (default to white)
+			const TProgmemRGBPalette16& colour_palette=White_p,	// Colour palette to use for pattern (default to white)
 			uint16_t resolution=256					// maximum magnitude of pattern space in +/- x, y and z directions
 			): 
 			BasePattern(colour_palette), 

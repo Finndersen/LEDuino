@@ -48,13 +48,13 @@ const TProgmemRGBPalette16 RetroC9_p FL_PROGMEM =
 #define WHIT 0xCCCCCC
 
 // set up a new 16-color palette with the Halloween colors
-const CRGBPalette16 HalloweenColors_p
-( 
+const TProgmemRGBPalette16 HalloweenColors_p FL_PROGMEM =
+{ 
   PURP, PURP, PURP, PURP,
   ORAN, ORAN, ORAN, ORAN,
   PURP, PURP, PURP, PURP,
   GREN, GREN, GREN, WHIT
-);
+};
 
 
 #endif
