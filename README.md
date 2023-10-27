@@ -1,11 +1,11 @@
 # Introduction
-LEDuino is a powerful framework for defining animated patterns and mapping them to segments of an LED strip controlled by an Arduino. It consists of a collection of components which can be configured and combined to achieve a high level of customisation for your LED project.
+LEDuino is a powerful framework for defining animated patterns and mapping them to segments of an addressable LED strip controlled by an Arduino and FastLED. It consists of a collection of components which can be configured and combined to achieve a high level of customisation for your LED project.
 
 LEDuino makes it easy to:
-- Define animation patterns (linear or 3D) which can be initialised with parameter values and colour pallettes to adjust behaviour
+- Define animation patterns (linear or 3D) which can be initialised with parameter values and colour palettes to adjust behaviour
 - Split a single LED strip into segments which can have patterns mapped to them independently
 - Map linear patterns to multiple different segments of an LED strip, with automatic scaling and interpolation
-- Define the position of LEDs in space and map 3D patterns to them
+- Define the position of LEDs in space to allow spatial pattern mapping
 - Run multiple different pattern mapping configurations at the same time
 - Project a linear pattern along a vector in 3D space 
 - Cycle through a sequence of pattern mapping configurations
@@ -22,7 +22,7 @@ The below video demonstrates the same simple moving, colour changing pulse patte
 
 ## Requirements
 
- - Ardunio-compatible micocontroller. Bare minimum of 8kB of RAM and 32kB Flash for a basic linear pattern mapping configuration. At least 16kB RAM, 64kB Flash and decent CPU is required for spatial pattern mapping or multiple concurrent patterns, depending on the complexity of your project. A [Teensy 3.1+](https://www.pjrc.com/teensy/index.html) works great (can comfortably run complex pattern configurations at 100+ FPS)
+ - Ardunio-compatible micocontroller. Bare minimum of 8kB of RAM and 32kB Flash for a basic linear pattern mapping configuration. At least 16kB RAM, 64kB Flash and decent CPU is required for spatial pattern mapping or multiple concurrent patterns, depending on the complexity of your project. A [Teensy 3.1+](https://www.pjrc.com/teensy/index.html) works great (can comfortably run complex pattern configurations on 300+ LEDs at 100+ FPS)
  - [FastLED](http://fastled.io/) Library
  - Individually addressable LED strip compatible with FastLED (e.g. Neopixel, WS2801, WS2811, WS2812B, LPD8806, TM1809, and [more](https://github.com/FastLED/FastLED/wiki/Chipset-reference))
 
@@ -41,12 +41,11 @@ The best way to get started and learn how to use the library is to check out the
 Then take a look at the [Reference](https://github.com/Finndersen/LEDuino/wiki/Reference) for more in-depth details, and check out some [Examples](https://github.com/Finndersen/LEDuino/wiki/Examples) to see how it might work for your project.
 
 ## Development
-This project is still under development. I made it for my own personal use but figured could be quite useful to others as well, so it has not been tested extensively in many configurations. Please let me know if you have any issues or ideas!
+This project is still under development and may be subject to changes of the API. I made it for my own personal use but figured could be quite useful to others as well, so it has not been tested extensively in many configurations. Please let me know if you have any issues or ideas!
 
 **TODO / Future work:**
 - Add more patterns and pallettes
 - Integrate audio reactivity into the framework
 - Add support for easily configuring LED matrix displays
 - Bluetooth/remote control support
-- Perhaps rework all linear Patterns so they work like LinearStatePattern but share a common buffer array (means all patterns would need to have the same resolution)
-- Perhaps introduce another class between PatternMapper and Controller which holds frame delay, duration and name
+- Allow using gradient palettes and those stored in RAM
