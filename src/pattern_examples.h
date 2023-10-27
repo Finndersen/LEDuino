@@ -25,8 +25,12 @@ class MovingPulse: public LinearPattern   {
     CRGB get_pixel_value(uint16_t num_pixels, uint16_t i) {
 		// Figure out distance behind pulse head to get brightness
 		int distance_behind_head = this->head_pos - i;
-		// If in front of pulse head or not within pulse width, return black
-		if (distance_behind_head < 0 || distance_behind_head > this->pulse_len)	{
+		// Case of when position is in front of pulse head (after head has looped around to start), so distance_behind_head is negative
+		if (distance_behind_head < 0)	{
+			distance_behind_head = num_pixels + distance_behind_head;
+		}
+		// If not within pulse width, return black
+		if (distance_behind_head > this->pulse_len)	{
 			return CRGB::Black;
 		}
 		// Use interpolator to get brightness
