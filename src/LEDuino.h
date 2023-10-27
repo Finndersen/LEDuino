@@ -60,10 +60,10 @@ class LEDuinoController {
 				// Print frame logic execution time and FastLED.show() time if DEBUG is enabled
 				#ifdef LEDUINO_DEBUG
 					Serial.print("Frame Time: ");
-					Serial.print(frame_process_time);
+					Serial.print(pre_show_time-pre_frame_time);
 					Serial.print(" Show time: ");
 					Serial.println(micros()-pre_show_time);
-					Serial.flush()
+					Serial.flush();
 				#endif
 			}
 		}
@@ -75,7 +75,7 @@ class LEDuinoController {
 			#ifdef LEDUINO_DEBUG
 				Serial.print("Choosing new pattern: " );
 				Serial.println(this->current_runner->name);
-				Serial.flush()
+				Serial.flush();
 			#endif
 			this->current_runner->reset();
 			// Reset LED state

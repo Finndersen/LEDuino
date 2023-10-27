@@ -29,7 +29,7 @@ class MappingRunner {
 			#ifdef LEDUINO_DEBUG
 				Serial.print("Initialising pattern mapping configuration: ");
 				Serial.println(this->name);
-				Serial.flush()
+				Serial.flush();
 			#endif
 			this->start_time = millis();
 			this->frame_time = 0;
