@@ -11,7 +11,8 @@
 #include "PatternMapping.h"
 #include "MappingRunner.h"
 
-#include "pattern_examples.h"
+#include "patterns/linear.h"
+#include "patterns/spatial.h"
 
 // Controller object which manages a collection of MappingRunners
 // Chooses which mapping to run, and handles running it at the desired framerate
