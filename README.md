@@ -40,8 +40,8 @@ The best way to get started and learn how to use the library is to check out the
 
 Then take a look at the [Reference](https://github.com/Finndersen/LEDuino/wiki/Reference) for more in-depth details, and check out some [Examples](https://github.com/Finndersen/LEDuino/tree/master/examples) to see how it might work for your project.
 
-## Development
-This project is still under development and may be subject to changes of the API. I made it for my own personal use but figured could be quite useful to others as well, so it has not been tested extensively in many configurations. Please let me know if you have any issues or ideas!
+## Development & Support
+This project is still under development and may be subject to changes of the API. I made it for my own personal use but figured could be quite useful to others as well, so it has not been tested extensively in many configurations. Please jump on the [Discord](https://discord.gg/8z9BZesP) to let me know what you think about it, or if you have any issues or ideas!
 
 **TODO / Future work:**
 - Add more patterns and palettes
