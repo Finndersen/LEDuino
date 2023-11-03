@@ -16,12 +16,6 @@ class BasePatternMapper {
 
 		// Excute new frame of pattern and map results to LED array
 		virtual void newFrame(CRGB* leds, uint16_t frame_time) const = 0;
-		
-		// Set palette of underlying pattern(s)
-		virtual void setPalette(const TProgmemRGBPalette16& new_palette) const = 0;
-		
-		// Reset palette of underlying pattern(s) to one it was initialised with
-		virtual void resetPalette()	const = 0;
 
 };
 
@@ -41,17 +35,7 @@ class BaseLinearPatternMapper: public BasePatternMapper {
 		void reset() const override {
 			fill_solid(this->pixel_data, this->num_pixels, CRGB::Black);
 			this->pattern.reset();
-		};
-
-		// Set palette of underlying pattern(s)
-		void setPalette(const TProgmemRGBPalette16& new_palette) const override	{
-			this->pattern.setPalette(new_palette);
-		};
-		
-		// Reset palette of underlying pattern(s) to one it was initialised with
-		void resetPalette()	const override {
-			this->pattern.resetPalette();
-		};
+		}
 		
 	protected:
 		LinearPattern& pattern;
@@ -100,7 +84,7 @@ class LinearPatternMapper: public BaseLinearPatternMapper {
 					interpolate_arbitrary_length(leds, strip_segment);
 				}			
 			}
-		}
+		};
 		
 	protected:
 		// Interpolate pattern pixel data to the provided strip segment, when pattern length (resolution) is equal to segment length
@@ -217,7 +201,7 @@ class SpatialPatternMapper: public BasePatternMapper {
 			if (this->offset == undefinedPoint) {
 				this->offset = this->project_centroid;
 			}
-		}
+		};
 
 		// Initialise/Reset pattern state
 		void reset() const override {		
@@ -244,17 +228,7 @@ class SpatialPatternMapper: public BasePatternMapper {
 					leds[led_id] = this->pattern.getPixelValue(pattern_pos);
 				}
 			}
-		}
-		
-		// Set palette of underlying pattern(s)
-		void setPalette(const TProgmemRGBPalette16& new_palette) const override 	{
-			this->pattern.setPalette(new_palette);
 		};
-		
-		// Reset palette of underlying pattern(s) to one it was initialised with
-		void resetPalette()	const override {
-			this->pattern.resetPalette();
-		};		
 		
 	protected:
 		SpatialPattern& pattern;
@@ -311,7 +285,7 @@ class LinearToSpatialPatternMapper : public BaseLinearPatternMapper {
 			this->inv_pattern_vect_norm = 1/vector_len;
 			// Pre-calculate pattern resolution / length constant
 			this->res_per_len = ((float) this->num_pixels-1.0)/this->path_length;
-		}
+		};
 		
 		// Excute new frame of pattern and map results to LED array
 		void newFrame(CRGB* leds, uint16_t frame_time) const override {
@@ -389,21 +363,8 @@ class MultiplePatternMapper : public BasePatternMapper {
 			for (uint8_t i=0; i < this->num_mappings; i++) {				
 				this->mappings[i]->newFrame(leds, frame_time);
 			}
-		}
-		
-		// Set palette of underlying pattern(s)
-		void setPalette(const TProgmemRGBPalette16& new_palette) const override {
-			for (uint8_t i=0; i < this->num_mappings; i++) {
-				this->mappings[i]->setPalette(new_palette);
-			}
 		};
-		
-		// Reset palette of underlying pattern(s) to one it was initialised with
-		void resetPalette() const	override {
-			for (uint8_t i=0; i < this->num_mappings; i++) {
-				this->mappings[i]->resetPalette();
-			}
-		};
+
 	protected:
 		BasePatternMapper** mappings;
 		const uint8_t num_mappings;

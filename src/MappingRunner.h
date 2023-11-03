@@ -3,7 +3,7 @@
 #include "PatternMapping.h"
 // Can override these defaults by setting before including LEDuino
 #ifndef LEDUINO_DEFAULT_DURATION
-	#define LEDUINO_DEFAULT_DURATION 15			// 15 second duration
+	#define LEDUINO_DEFAULT_DURATION 10			// 10 second duration
 #endif
 #ifndef LEDUINO_DEFAULT_FRAME_DELAY	
 	#define LEDUINO_DEFAULT_FRAME_DELAY 20		// 20 ms frame delay (50 FPS)
@@ -50,16 +50,6 @@ class MappingRunner {
 		// Return whether it is time to start a new frame (frame_delay has elapsed since previous frame time)
 		bool frameReady()	{
 			return (millis() - this->start_time - this->frame_time) >= this->frame_delay;
-		};
-
-		// Set palette of underlying pattern(s)
-	  	void setPalette(const TProgmemRGBPalette16& new_palette)	{
-			this->pattern_mapper.setPalette(new_palette);
-		};
-		
-		// Reset palette of underlying pattern(s) to one it was initialised with
-		 void resetPalette()	{
-			this->pattern_mapper.resetPalette();
 		};
 
         const char* name;  // Name or description of pattern

@@ -5,8 +5,8 @@ class GrowingSpherePattern: public SpatialPattern	{
 	public:
 		GrowingSpherePattern(
 			uint8_t speed=1,
-			const TProgmemRGBPalette16& colour_palette=RainbowColors_p
-		) : SpatialPattern(colour_palette), 
+			const ColorPicker& color_picker=RainbowColors_picker
+		) : SpatialPattern(color_picker), 
 		speed(speed) {}
 		
 		void reset()	override {
@@ -35,7 +35,7 @@ class GrowingSpherePattern: public SpatialPattern	{
 			if (point_distance > this->radius) 	{
 				return CRGB::Black;
 			} else {
-				return this->colorFromPalette((255*point_distance)/this->resolution);
+				return this->getColor((255*point_distance)/this->resolution);
 			}
 		}
 	private:

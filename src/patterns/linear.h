@@ -1,13 +1,14 @@
 #include <FastLED.h>
 #include "Pattern.h"
+#include "ColorPicker.h"
 
 // Simple moving pulse of light along axis. Pulse has a bright head with a tapering tail
 class MovingPulsePattern: public LinearPattern   {
   public:
     MovingPulsePattern(
 		uint8_t pulse_len=3, 	// Length of pulse 
-		const TProgmemRGBPalette16& colour_palette = RainbowColors_p):
-      LinearPattern(colour_palette), 
+		const ColorPicker& color_picker=RainbowColors_picker):
+      LinearPattern(color_picker), 
 	  head_pos(0), 
 	  pulse_len(pulse_len), 	
 	  tail_interpolator(Interpolator(0, 255, pulse_len + 1, 0))  {}
@@ -36,7 +37,7 @@ class MovingPulsePattern: public LinearPattern   {
 		// Use interpolator to get brightness
 		uint8_t lum = tail_interpolator.get_value(distance_behind_head);
 		uint8_t hue = (i*255) / num_pixels; // Change colour along axis
-		return this->colorFromPalette(hue, lum);
+		return this->getColor(hue, lum);
 	}
 
   private:
@@ -50,7 +51,7 @@ class MovingPulsePattern: public LinearPattern   {
 //Moing sine wave with randomised speed, duration and rainbow colour offset, and changes direction
 class RandomRainbowsPattern: public LinearPattern  {
   public:
-    RandomRainbowsPattern(): LinearPattern(RainbowColors_p) {}
+    RandomRainbowsPattern(): LinearPattern(RainbowColors_picker) {}
 	
 	void reset() override{
 		LinearPattern::reset();
@@ -87,7 +88,7 @@ class RandomRainbowsPattern: public LinearPattern  {
 	CRGB get_pixel_value(uint16_t num_pixels, uint16_t i)  {
 		uint8_t virtual_pos = (255*(i + this->pos))/(num_pixels);
 		uint8_t val = cubicwave8((virtual_pos*this->scale_factor)%255);
-		return this->colorFromPalette((val+this->colour_offset)%255, this->dim ? val>>2 : val);
+		return this->getColor((val+this->colour_offset)%255, this->dim ? val>>2 : val);
 	}
 	  
 	protected:
@@ -107,7 +108,7 @@ class RandomRainbowsPattern: public LinearPattern  {
 class PridePattern: public LinearPattern	{
 	public:
 		PridePattern(uint8_t speed_factor=4):
-		  LinearPattern(RainbowColors_p), 
+		  LinearPattern(), 
 		  speed_factor(speed_factor) {}
 		
 		void frameAction(CRGB* pixel_data, uint16_t num_pixels, uint32_t frame_time)	override {
@@ -159,101 +160,6 @@ class PridePattern: public LinearPattern	{
 };
 
 
-// Pacifica
-//  Gentle, blue-green ocean waves.
-//  December 2019, Mark Kriegsman and Mary Corey March.
-// https://github.com/FastLED/FastLED/blob/master/examples/Pacifica/Pacifica.ino
-CRGBPalette16 pacifica_palette_1 = 
-    { 0x000507, 0x000409, 0x00030B, 0x00030D, 0x000210, 0x000212, 0x000114, 0x000117, 
-      0x000019, 0x00001C, 0x000026, 0x000031, 0x00003B, 0x000046, 0x14554B, 0x28AA50 };
-CRGBPalette16 pacifica_palette_2 = 
-    { 0x000507, 0x000409, 0x00030B, 0x00030D, 0x000210, 0x000212, 0x000114, 0x000117, 
-      0x000019, 0x00001C, 0x000026, 0x000031, 0x00003B, 0x000046, 0x0C5F52, 0x19BE5F };
-CRGBPalette16 pacifica_palette_3 = 
-    { 0x000208, 0x00030E, 0x000514, 0x00061A, 0x000820, 0x000927, 0x000B2D, 0x000C33, 
-      0x000E39, 0x001040, 0x001450, 0x001860, 0x001C70, 0x002080, 0x1040BF, 0x2060FF };
-	  
-
-class PacificaPattern: public LinearPattern	{
-	public:		
-		void frameAction(CRGB* pixel_data, uint16_t num_pixels, uint32_t frame_time)	override {
-			// Increment the four "color index start" counters, one for each wave layer.
-			// Each is incremented at a different speed, and the speeds vary over time.
-			static uint16_t sCIStart1, sCIStart2, sCIStart3, sCIStart4;
-			static uint32_t sLastms = 0;
-			uint32_t deltams = frame_time - sLastms;
-			sLastms = frame_time;
-			uint16_t speedfactor1 = beatsin16(3, 179, 269);
-			uint16_t speedfactor2 = beatsin16(4, 179, 269);
-			uint32_t deltams1 = (deltams * speedfactor1) / 256;
-			uint32_t deltams2 = (deltams * speedfactor2) / 256;
-			uint32_t deltams21 = (deltams1 + deltams2) / 2;
-			sCIStart1 += (deltams1 * beatsin88(1011,10,13));
-			sCIStart2 -= (deltams21 * beatsin88(777,8,11));
-			sCIStart3 -= (deltams1 * beatsin88(501,5,7));
-			sCIStart4 -= (deltams2 * beatsin88(257,4,6));
-
-			// Clear out the LED array to a dim background blue-green
-			fill_solid(pixel_data, num_pixels, CRGB( 2, 6, 10));
-
-			// Render each of four layers, with different scales and speeds, that vary over time
-			this->pacifica_one_layer(pixel_data, num_pixels, pacifica_palette_1, sCIStart1, beatsin16( 3, 11 * 256, 14 * 256), beatsin8( 10, 70, 130), 0-beat16( 301) );
-			this->pacifica_one_layer(pixel_data, num_pixels, pacifica_palette_2, sCIStart2, beatsin16( 4,  6 * 256,  9 * 256), beatsin8( 17, 40,  80), beat16( 401) );
-			this->pacifica_one_layer(pixel_data, num_pixels, pacifica_palette_3, sCIStart3, 6 * 256, beatsin8( 9, 10,38), 0-beat16(503));
-			this->pacifica_one_layer(pixel_data, num_pixels, pacifica_palette_3, sCIStart4, 5 * 256, beatsin8( 8, 10,28), beat16(601));
-
-			// Add brighter 'whitecaps' where the waves lines up more
-			this->pacifica_add_whitecaps(pixel_data, num_pixels);
-
-			// Deepen the blues and greens a bit
-			this->pacifica_deepen_colors(pixel_data, num_pixels);
-		}
-	protected:
-		// Add one layer of waves into the led array
-		void pacifica_one_layer(CRGB* pixel_data, uint16_t num_pixels, CRGBPalette16& p, uint16_t cistart, uint16_t wavescale, uint8_t bri, uint16_t ioff)
-		{
-			uint16_t ci = cistart;
-			uint16_t waveangle = ioff;
-			uint16_t wavescale_half = (wavescale / 2) + 20;
-			for( uint16_t i = 0; i < num_pixels; i++) {
-				waveangle += 250;
-				uint16_t s16 = sin16( waveangle ) + 32768;
-				uint16_t cs = scale16( s16 , wavescale_half ) + wavescale_half;
-				ci += cs;
-				uint16_t sindex16 = sin16( ci) + 32768;
-				uint8_t sindex8 = scale16( sindex16, 240);
-				CRGB c = ColorFromPalette( p, sindex8, bri, LINEARBLEND);
-				pixel_data[i] += c;
-			}
-		}
-		// Add extra 'white' to areas where the four layers of light have lined up brightly
-		void pacifica_add_whitecaps(CRGB* pixel_data, uint16_t num_pixels)
-		{
-			uint8_t basethreshold = beatsin8( 9, 55, 65);
-			uint8_t wave = beat8( 7 );
-
-			for( uint16_t i = 0; i < num_pixels; i++) {
-				uint8_t threshold = scale8( sin8( wave), 20) + basethreshold;
-				wave += 7;
-				uint8_t l = pixel_data[i].getAverageLight();
-				if( l > threshold) {
-					uint8_t overage = l - threshold;
-					uint8_t overage2 = qadd8( overage, overage);
-					pixel_data[i] += CRGB( overage, overage2, qadd8( overage2, overage2));
-				}
-			}
-		}
-		// Deepen the blues and greens
-		void pacifica_deepen_colors(CRGB* pixel_data, uint16_t num_pixels)
-		{
-			for( uint16_t i = 0; i < num_pixels; i++) {
-				pixel_data[i].blue = scale8( pixel_data[i].blue,  145); 
-				pixel_data[i].green= scale8( pixel_data[i].green, 200); 
-				pixel_data[i] |= CRGB( 2, 5, 7);
-			}
-		}
-};
-
 // This function takes a pixel, and if its in the 'fading down'
 // part of the cycle, it adjusts the color a little bit like the
 // way that incandescent bulbs fade toward 'red' as they dim.
@@ -285,9 +191,9 @@ class TwinklePattern : public LinearPattern   {
     TwinklePattern(
 		uint8_t twinkle_speed = 6, 
 		uint8_t twinkle_density = 4, 
-		const TProgmemRGBPalette16& colour_palette = FairyLight_p, 
+		const ColorPicker& color_picker = FairyLight_picker, 
 		CRGB bg = CRGB::Black):
-      LinearPattern(colour_palette), 
+      LinearPattern(color_picker), 
 	  bg(bg), 
 	  bg_brightness(bg.getAverageLight()), 
 	  twinkle_speed(twinkle_speed), 
@@ -350,7 +256,7 @@ class TwinklePattern : public LinearPattern   {
       uint8_t hue = slowcycle8 - salt;
       CRGB c;
       if ( bright > 0) {
-        c = this->colorFromPalette(hue, bright, NOBLEND);
+        c = this->getColor(hue, bright);
         coolLikeIncandescent( c, fastcycle8);
       } else {
         c = CRGB::Black;
@@ -370,8 +276,8 @@ class TwinklePattern : public LinearPattern   {
 // Extends head to end of strip then retracts tail
 class GrowThenShrinkPattern : public LinearPattern  {
 	public:
-		GrowThenShrinkPattern(const TProgmemRGBPalette16& colour_palette = RainbowColors_p):
-		LinearPattern(colour_palette) {}
+		GrowThenShrinkPattern(const ColorPicker& color_picker = RainbowColors_picker):
+		LinearPattern(color_picker) {}
 		
 		void reset() override {
 			LinearPattern::reset();
@@ -408,7 +314,7 @@ class GrowThenShrinkPattern : public LinearPattern  {
 			// Set pixel data
 			for (uint16_t i=0; i<num_pixels; i++) {
 				if ((this->tail_pos <= i) && (i <= this->head_pos)) 	{
-					pixel_data[i] = this->colorFromPalette((i*255)/num_pixels);
+					pixel_data[i] = this->getColor((i*255)/num_pixels);
 				} else {
 					pixel_data[i] = CRGB::Black;
 				}
@@ -422,8 +328,8 @@ class GrowThenShrinkPattern : public LinearPattern  {
 		
 class SparkleFillPattern : public LinearPattern {
   public:
-    SparkleFillPattern(const TProgmemRGBPalette16& colour_palette=RainbowColors_p):
-      LinearPattern(colour_palette) {}
+    SparkleFillPattern(const ColorPicker& color_picker=RainbowColors_picker):
+      LinearPattern(color_picker) {}
 	  
 	void reset() {
 		LinearPattern::reset();
@@ -455,7 +361,7 @@ class SparkleFillPattern : public LinearPattern {
 					}
 				} else if (this->fill) {
 					// Fill with new colour
-					pixel_data[i] = this->colorFromPalette(random(0,256), 32);
+					pixel_data[i] = this->getColor(random(0,256), 32);
 					this->pixels_changed++;
 				}
 				
@@ -479,8 +385,8 @@ class SparkleFillPattern : public LinearPattern {
 class DiscoStrobePattern : public LinearPattern  {
   public:
     DiscoStrobePattern(
-		const TProgmemRGBPalette16& colour_palette=HalloweenColors_p):
-      LinearPattern(colour_palette) {}
+		const ColorPicker& color_picker=HalloweenColors_picker):
+      LinearPattern(color_picker) {}
 	
 	void frameAction(CRGB* pixel_data, uint16_t num_pixels, uint32_t frame_time)	override {
 		// First, we black out all the LEDs
@@ -622,7 +528,7 @@ class DiscoStrobePattern : public LinearPattern  {
 		  for( uint16_t i = startpos; i <= num_pixels-1; i += period) {
 			// Switched from HSV color wheel to color palette
 			// Was: CRGB color = CHSV( hue, saturation, value); 
-			CRGB color = this->colorFromPalette(hue, value, NOBLEND);
+			CRGB color = this->getColor(hue, value);
 			
 			// draw one dash
 			uint16_t pos = i;
@@ -645,14 +551,13 @@ template<uint16_t t_resolution>
 class FirePattern: public LinearPattern   {
   public:
 		FirePattern(
-		uint8_t cooling=60,    // Less cooling = taller flames.  More cooling = shorter flames. Default 60, suggested range 20-100 
-		uint8_t sparking=100): // Higher chance = more roaring fire.  Lower chance = more flickery fire. Default 100, suggested range 50-200.
-		LinearPattern(HeatColors_p),
+		uint8_t cooling=60,    	// Less cooling = taller flames.  More cooling = shorter flames. Default 60, suggested range 20-100 
+		uint8_t sparking=100,	// Higher chance = more roaring fire.  Lower chance = more flickery fire. Default 100, suggested range 50-200.
+		const ColorPicker& color_picker=HeatColors_picker): 
+		LinearPattern(color_picker),
 		cooling(cooling),  	
 		sparking(sparking)  
-		{
-
-		};
+		{};
 		
 	void reset()	override {
 		LinearPattern::reset();
@@ -688,7 +593,7 @@ class FirePattern: public LinearPattern   {
 			if (i < (num_pixels/10) + 1)	{
 				colorindex = constrain(colorindex, 40, 120);
 			}
-			pixel_data[i] = this->colorFromPalette(colorindex);
+			pixel_data[i] = this->getColor(colorindex);
 		}
 	}
 	   
@@ -705,8 +610,8 @@ class SkippingSpikePattern: public LinearPattern  {
     SkippingSpikePattern(
       uint8_t max_pulse_width,
       uint8_t pulse_speed=1,
-	  const TProgmemRGBPalette16& colour_palette=RainbowColors_p):
-      LinearPattern(colour_palette),
+	  const ColorPicker& color_picker=RainbowColors_picker):
+      LinearPattern(color_picker),
 	    max_pulse_width(max_pulse_width),
 	    pulse_speed(pulse_speed) {}
 	 
@@ -750,7 +655,7 @@ class SkippingSpikePattern: public LinearPattern  {
 				pixel_data[i] = CRGB::Black;
 			} else {
 				uint8_t lum = (255 - (diff*255)/this->ramp);
-				pixel_data[i] = this->colorFromPalette(255-lum, lum);
+				pixel_data[i] = this->getColor(255-lum, lum);
 			}
 		}
     }
