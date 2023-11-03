@@ -1,3 +1,4 @@
+// This is a basic example using an LED strip configured as a single segment, that will cycle through 3 linear patterns
 #include <FastLED.h>
 #include <LEDuino.h>
 
@@ -8,7 +9,7 @@
 CRGB leds[NUM_LEDS];
 
 // If we wanted to use patterns that would benefit from higher resolution and interpolation for smooth looking motion,
-// we could declare another CRGB pixel array that is larger than the above LED array and can be used by patterns 
+// we could declare another CRGB pixel array that is larger than the actual LED array and can be used by patterns 
 // to create animations with higher resolution than the number of physical LEDs. 
 // In this simple example we will just use the LED array directly
 
