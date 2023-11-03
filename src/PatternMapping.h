@@ -339,8 +339,6 @@ class LinearToSpatialPatternMapper : public BaseLinearPatternMapper {
 
 // Allows for multiple pattern mappings to be applied at the same time
 // Can have multiple LinearPatternMapper or SpatialPatternMappings running concurrently on different parts of the same strip of LEDS
-// Will run the new frame logic of all included patterns, so could be CPU intensive and cause lag
-// Need to specify a global frame_delay which will override that of the included PatternMappings
 class MultiplePatternMapper : public BasePatternMapper {
 	public:
 		// Constructor

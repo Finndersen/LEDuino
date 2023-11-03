@@ -38,7 +38,7 @@ Otherwise, for manual installation:
 ## Getting Started
 The best way to get started and learn how to use the library is to check out the [tutorial](https://github.com/Finndersen/LEDuino/wiki/Tutorial).
 
-Then take a look at the [Reference](https://github.com/Finndersen/LEDuino/wiki/Reference) for more in-depth details, and check out some [Examples](https://github.com/Finndersen/LEDuino/wiki/Examples) to see how it might work for your project.
+Then take a look at the [Reference](https://github.com/Finndersen/LEDuino/wiki/Reference) for more in-depth details, and check out some [Examples](https://github.com/Finndersen/LEDuino/tree/master/examples) to see how it might work for your project.
 
 ## Development
 This project is still under development and may be subject to changes of the API. I made it for my own personal use but figured could be quite useful to others as well, so it has not been tested extensively in many configurations. Please let me know if you have any issues or ideas!
