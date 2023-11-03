@@ -34,8 +34,13 @@ class LEDuinoController {
 			current_runner_id(num_mappings-1) {}
 
 		void initialise() {
-			// Set initial pattern
 			this->setNewPatternMapping();
+		}
+
+		void clear_leds()	{
+			// Reset LED state
+			FastLED.clear();
+			FastLED.show();
 		}
 		
 		// Run pattern newFrame() if ready, set new pattern if required
@@ -79,9 +84,7 @@ class LEDuinoController {
 				Serial.flush();
 			#endif
 			this->current_runner->reset();
-			// Reset LED state
-			FastLED.clear();
-			FastLED.show();
+			this->clear_leds();
 		}
 		
 		MappingRunner* current_runner;		// Currently selected mapping runner
