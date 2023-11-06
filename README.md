@@ -1,11 +1,11 @@
 # Introduction
-LEDuino is a powerful framework for defining animated patterns and mapping them to segments of an addressable LED strip controlled by an Arduino and FastLED. It consists of a collection of components which can be configured and combined to achieve a high level of customisation for your LED project.
+LEDuino is a powerful framework for defining animated patterns and mapping them to segments of an addressable LED strip controlled by an Arduino and FastLED. It consists of a collection of components which can be configured and combined in a declarative way to achieve a high level of customisation for your LED project.
 
 LEDuino makes it easy to:
 - Define animation patterns (linear or 3D) which can be initialised with parameter values and colour palettes to adjust behaviour
 - Split a single LED strip into segments which can have patterns mapped to them independently
-- Map linear patterns to multiple different segments of an LED strip, with automatic scaling and interpolation
-- Define the position of LEDs in space to allow spatial pattern mapping
+- Map linear patterns to LED strip segments of different lengths, with automatic scaling and interpolation
+- Define the position of LEDs in space to allow spatial (3D) pattern mapping
 - Run multiple different pattern mapping configurations at the same time
 - Project a linear pattern along a vector in 3D space 
 - Cycle through a sequence of pattern mapping configurations
@@ -48,4 +48,3 @@ This project is still under development and may be subject to changes of the API
 - Integrate audio reactivity into the framework
 - Add support for easily configuring LED matrix displays
 - Bluetooth/remote control support
-- Allow using gradient palettes and those stored in RAM
