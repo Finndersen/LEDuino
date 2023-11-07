@@ -8,3 +8,7 @@ LEDuino 0.2.0
 - LinearPatternMapper optimisations
 - Add MappingRunner
 - Add ColorPicker
+
+LEDuino 0.2.1
+=============
+- Fixed issue with importing Teensy-specific <cmath> in Point.h

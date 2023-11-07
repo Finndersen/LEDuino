@@ -1,7 +1,6 @@
 #ifndef Point_h
 #define  Point_h
 
-#include <cmath>
 #include <float.h>
 #include "utils.h"
 #include "Arduino.h"
@@ -84,7 +83,7 @@ class Point: public Printable {
 		
 		// Euclidean norm 
 		const float norm() const { 
-			return std::sqrt(x*x + y*y + z*z); 
+			return sqrt(x*x + y*y + z*z); 
 		};
 		
 		// Calculate distance of this point from plane defined by a normal vector and point
@@ -99,12 +98,12 @@ class Point: public Printable {
 
 		// Distance to other point
 		float distance(const Point& other)	const {
-			return std::sqrt(this->distance_squared(other)); 
+			return sqrt(this->distance_squared(other)); 
 		};
 		
 		// Square of Distance to other point (useful for doing distance comparisons and dont want to square root)
 		float distance_squared(const Point& other)	const {
-			return std::pow(other.x-this->x, 2) + std::pow(other.y-this->y, 2) + std::pow(other.z-this->z, 2); 
+			return pow(other.x-this->x, 2) + pow(other.y-this->y, 2) + pow(other.z-this->z, 2); 
 		};
 		
 		
