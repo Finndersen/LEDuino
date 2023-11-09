@@ -142,44 +142,50 @@ Point undefinedPoint(FLT_MIN, FLT_MIN, FLT_MIN);
 // Class to define bounding box (rectangular prism) defined by minimum (bottom left) and maximum (top right) points
 class Bounds {
 	public: 
-		Bounds(Point min, Point max): min(min), max(max) {}
+		Bounds(Point min_point, Point max_point): min_point(min_point), max_point(max_point) {}
 		
 		// Get vector which represents magnitude of bounds in each coordinate (width, length and depth)
 		Point magnitude() {
-			return Point(this->max.x - this->min.x, this->max.y - this->min.y, this->max.z - this->min.z);
+			return Point(
+				this->max_point.x - this->min_point.x, 
+				this->max_point.y - this->min_point.y, 
+				this->max_point.z - this->min_point.z);
 		}
 		
 		// Centre point of bounds
 		Point centre() {
-			return Point(this->max.x + this->min.x, this->max.y + this->min.y, this->max.z + this->min.z)/2;
+			return Point(
+				this->max_point.x + this->min_point.x, 
+				this->max_point.y + this->min_point.y, 
+				this->max_point.z + this->min_point.z)/2;
 		}
 		
 		// Whether or not point is contained in bounds
 		bool contains(Point point) {
-			return ((point.x <= this->max.x) && (point.x >= this->min.x) &&
-					(point.y <= this->max.y) && (point.y >= this->min.y) &&
-					(point.z <= this->max.z) && (point.z >= this->min.z)
+			return ((point.x <= this->max_point.x) && (point.x >= this->min_point.x) &&
+					(point.y <= this->max_point.y) && (point.y >= this->min_point.y) &&
+					(point.z <= this->max_point.z) && (point.z >= this->min_point.z)
 			);
 		}
 		
-		Point min, max;
+		Point min_point, max_point;
 };
 
 // Get Bounds of an array of points
 Bounds get_bounds_of_points(Point* points, uint16_t num_points) {
-	Point max(FLT_MIN, FLT_MIN, FLT_MIN);
-	Point min(FLT_MAX, FLT_MAX, FLT_MAX);
+	Point max_point(FLT_MIN, FLT_MIN, FLT_MIN);
+	Point min_point(FLT_MAX, FLT_MAX, FLT_MAX);
 	for (uint16_t i=0; i < num_points; i++) {
 		Point& point = points[i];
-		if (point.x > max.x) max.x = point.x;
-		if (point.y > max.y) max.y = point.y;
-		if (point.z > max.z) max.z = point.z;
+		if (point.x > max_point.x) max_point.x = point.x;
+		if (point.y > max_point.y) max_point.y = point.y;
+		if (point.z > max_point.z) max_point.z = point.z;
 
-		if (point.x < min.x) min.x = point.x;
-		if (point.y < min.y) min.y = point.y;
-		if (point.z < min.z) min.z = point.z;
+		if (point.x < min_point.x) min_point.x = point.x;
+		if (point.y < min_point.y) min_point.y = point.y;
+		if (point.z < min_point.z) min_point.z = point.z;
 	}
-	return Bounds(min, max);
+	return Bounds(min_point, max_point);
 };
 
 #endif

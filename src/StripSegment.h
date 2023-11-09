@@ -127,13 +127,13 @@ Bounds get_spatial_segment_bounds(SpatialStripSegment_T* spatial_segments[], uin
 		SpatialStripSegment_T* spatial_segment = spatial_segments[i];
 		Bounds segment_bounds = spatial_segment->get_bounds();
 		// Update minimums
-		if (segment_bounds.min.x < global_min.x) 	global_min.x = segment_bounds.min.x;
-		if (segment_bounds.min.y < global_min.y) 	global_min.y = segment_bounds.min.y;
-		if (segment_bounds.min.z < global_min.z) 	global_min.z = segment_bounds.min.z;
+		if (segment_bounds.min_point.x < global_min.x) 	global_min.x = segment_bounds.min_point.x;
+		if (segment_bounds.min_point.y < global_min.y) 	global_min.y = segment_bounds.min_point.y;
+		if (segment_bounds.min_point.z < global_min.z) 	global_min.z = segment_bounds.min_point.z;
 
-		if (segment_bounds.max.x > global_max.x) 	global_max.x = segment_bounds.max.x;
-		if (segment_bounds.max.y > global_max.y) 	global_max.y = segment_bounds.max.y;
-		if (segment_bounds.max.z > global_max.z) 	global_max.z = segment_bounds.max.z;
+		if (segment_bounds.max_point.x > global_max.x) 	global_max.x = segment_bounds.max_point.x;
+		if (segment_bounds.max_point.y > global_max.y) 	global_max.y = segment_bounds.max_point.y;
+		if (segment_bounds.max_point.z > global_max.z) 	global_max.z = segment_bounds.max_point.z;
 	}
 	return Bounds(global_min, global_max);
 }
