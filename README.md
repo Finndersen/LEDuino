@@ -22,7 +22,7 @@ The below video demonstrates the same simple moving, colour changing pulse patte
 
 ## Requirements
 
- - Ardunio-compatible micocontroller. Bare minimum of 8kB of RAM and 32kB Flash for a basic linear pattern mapping configuration. At least 16kB RAM, 64kB Flash and decent CPU is required for spatial pattern mapping or multiple concurrent patterns, depending on the complexity of your project and number of LEDs. A [Teensy 3.1+](https://www.pjrc.com/teensy/index.html) works great (can comfortably run complex pattern configurations on 300+ LEDs at 100+ FPS)
+ - Ardunio-compatible micocontroller. Bare minimum of 1kB of RAM and 16kB Flash for a basic linear pattern mapping configuration with a short LED strip. At least 8kB RAM, 64kB Flash and decent CPU is required for spatial pattern mapping or multiple concurrent patterns, depending on the complexity of your project and number of LEDs. A [Teensy 3.1+](https://www.pjrc.com/teensy/index.html) works great (can comfortably run complex pattern configurations on 300+ LEDs at 100+ FPS)
  - [FastLED](http://fastled.io/) Library
  - Individually addressable LED strip compatible with FastLED (e.g. Neopixel, WS2801, WS2811, WS2812B, LPD8806, TM1809, and [more](https://github.com/FastLED/FastLED/wiki/Chipset-reference))
 
