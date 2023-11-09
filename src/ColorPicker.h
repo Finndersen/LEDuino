@@ -7,13 +7,27 @@
 // Allows for subclasses which wrap and provides an interface to the various types of palettes used in FastLED
 // Can be subclassed to make custom palette implementations (doesnt have to involve using FastLEDs palette utilities)  
 class ColorPicker {
-  public:
-
-    // Basic placeholder implementation just gets colour from provided hue and brightness
+	public:
+		// Basic placeholder implementation just gets colour from provided hue and brightness
 		virtual CRGB getColor(uint8_t hue, uint8_t brightness=255, uint8_t saturation=255) const {
-      return CHSV(hue, saturation, brightness);
-    };
+			return CHSV(hue, saturation, brightness);
+		};
 
+};
+
+// Color picker that always chooses the same constant color (hue)
+class ConstantHuePicker : public ColorPicker {
+	public: 
+		ConstantHuePicker(
+			uint8_t hue
+		): hue(hue) {}
+
+		virtual CRGB getColor(uint8_t hue, uint8_t brightness=255, uint8_t saturation=255) const {
+			return CHSV(this->hue, saturation, brightness);
+		};
+
+	protected:
+	uint8_t hue;
 };
 
 
