@@ -1,6 +1,8 @@
 #ifndef utils_h
 #define  utils_h
 
+#include <Arduino.h>
+
 #define sgn(x) ((x > 0) - (x < 0))
 #define same_sign(x, y) ((x<0) == (y<0))
 
@@ -35,6 +37,19 @@ uint16_t wrap_subtract(uint16_t value, uint16_t subtract, uint16_t max_value)	{
 	} else {
 		return max_value - (subtract - value-1);
 	}
+}
+
+// Get a new random number from 0-255, but with a minimum distance away from the previous one
+uint8_t new_random_value8(uint8_t old_value, uint8_t min_distance=42)  {
+  uint8_t r = 0, x = 0, y = 0, d = 0;
+
+  while(d < min_distance) {
+    r = random8();
+    x = abs(old_value - r);
+    y = 255 - x;
+    d = min(x, y);
+  }
+  return r;
 }
 
 /*
